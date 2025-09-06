@@ -18,16 +18,23 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import xd.firewolfik.hubxyeta.Main;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class PlayerListener implements Listener {
 
     private final Main plugin;
     private final ConfigManager config;
     private final ItemsManager itemsManager;
+
+    // Храним таски для каждого игрока
+    private final Map<Player, BukkitTask> actionBarTasks = new HashMap<>();
 
     public PlayerListener(Main plugin) {
         this.plugin = plugin;
@@ -76,7 +83,7 @@ public class PlayerListener implements Listener {
         // Настройка мира
         config.setupWorld(player.getWorld());
 
-        // Action Bar
+        // Action Bar - запускаем автоматически для всех игроков
         if (config.isActionBarEnabled()) {
             startActionBar(player);
         }
@@ -84,6 +91,8 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+
         // Скрытие сообщения о выходе
         if (config.isHideStream()) {
             event.setQuitMessage(null);
@@ -91,8 +100,11 @@ public class PlayerListener implements Listener {
 
         // Очистка предметов
         if (config.isClearItems()) {
-            event.getPlayer().getInventory().clear();
+            player.getInventory().clear();
         }
+
+        // Остановка Action Bar таски для этого игрока
+        stopActionBar(player);
     }
 
     private void hidePlayersForPlayer(Player newPlayer) {
@@ -286,16 +298,22 @@ public class PlayerListener implements Listener {
     }
 
     private void startActionBar(Player player) {
-        new BukkitRunnable() {
+        // Останавливаем предыдущую таску если она есть
+        stopActionBar(player);
+
+        BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
                 if (!player.isOnline()) {
                     cancel();
+                    actionBarTasks.remove(player);
                     return;
                 }
 
                 String message = plugin.getMessagesConfig().getString("messages.action-bar");
-                if (message != null) {
+                if (message != null && !message.isEmpty()) {
+                    // Заменяем плейсхолдеры
+                    message = message.replace("%players%", String.valueOf(Bukkit.getOnlinePlayers().size()));
                     message = ColorUtil.getInstance().translateColor(message);
 
                     // Отправляем action bar сообщение
@@ -303,6 +321,28 @@ public class PlayerListener implements Listener {
                             TextComponent.fromLegacyText(message));
                 }
             }
-        }.runTaskTimerAsynchronously(plugin, 0L, 20L); // Каждую секунду
+        }.runTaskTimerAsynchronously(plugin,0L, 5L);
+
+        // Сохраняем таску для этого игрока
+        actionBarTasks.put(player, task);
+    }
+
+    private void stopActionBar(Player player) {
+        BukkitTask task = actionBarTasks.remove(player);
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    public void stopAllActionBars() {
+        actionBarTasks.values().forEach(BukkitTask::cancel);
+        actionBarTasks.clear();
+    }
+    public void restartAllActionBars() {
+        if (config.isActionBarEnabled()) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                startActionBar(player);
+            }
+        }
     }
 }

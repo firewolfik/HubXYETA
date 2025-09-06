@@ -18,6 +18,7 @@ public final class Main extends JavaPlugin {
     private ConfigManager configManager;
     private ItemsManager itemsManager;
     private FileConfiguration messagesConfig;
+    private PlayerListener playerListener;
 
     @Override
     public void onEnable() {
@@ -68,10 +69,12 @@ public final class Main extends JavaPlugin {
     }
 
     public void reloadPlugin() {
+        playerListener.stopAllActionBars();
         reloadConfig();
         loadMessagesConfig();
         configManager.reloadConfigs();
         itemsManager.reloadItems();
+        playerListener.restartAllActionBars();
         getLogger().info("Плагин перезагружен!");
     }
     public FileConfiguration getMessagesConfig() {
