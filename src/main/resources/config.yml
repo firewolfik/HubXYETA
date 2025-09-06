@@ -1,0 +1,45 @@
+general:
+  locationHub:
+    x: 0.5
+    y: 14
+    z: 0.5
+    yaw: 0
+    pitch: 0
+    world: "world"
+
+settings:
+  hide-player: false
+  disable-chat: true
+  disable-hunger: true
+  disable-damage: true
+
+hiders:
+  hide-stream: true # Скрытие сообщений о вступлении, уходе, смерти и т.д.
+
+items:
+  disable_move: true
+  disable_drop: true
+  disable_pickup: true
+
+world:
+  time: 6000
+  rules:
+    doDaylightCycle: false
+    doWeatherCycle: false
+    doMobSpawning: false
+
+player:
+  gamemode: ADVENTURE
+  heath: 20
+  effects:
+    - "SPEED:1:0:false"
+
+join:
+  join-message:
+    - "&easd"
+  join-title: "&easd"
+  join-subtitle: "&easd"
+  clear-chat: true
+
+leave:
+  clear-items: true
