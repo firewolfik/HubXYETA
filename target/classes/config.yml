@@ -7,6 +7,9 @@ general:
     pitch: 0
     world: "world"
 
+actionbar:
+  enabled: true
+
 settings:
   hide-player: false
   disable-chat: true
