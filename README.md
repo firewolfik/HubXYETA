@@ -41,8 +41,8 @@
 
 ## 📞 Поддержка
 
-- **Telegram**: [t.me/kirilltwice](https://t.me/oooSwagParty)
-- **Issues**: [GitHub Issues](https://github.com/firewolfik/HubXYETA/issues)
+- **Telegram**: [тык](https://t.me/oooSwagParty)
+- **Issues**: [тык](https://github.com/firewolfik/HubXYETA/issues)
 
 ---
 
