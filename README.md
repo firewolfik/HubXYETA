@@ -6,7 +6,7 @@
 ![Paper](https://img.shields.io/badge/Paper-Compatible-blue)
 ![Java](https://img.shields.io/badge/Java-16+-red)
 
-**Продвинутая система предотвращения выхода из игры во время PvP боя**
+**Продвинутая система хаба для вашего Minecraft сервера**
 
 </div>
 
