@@ -21,42 +21,34 @@ public class ConfigManager {
 
     private final Main plugin;
 
-    // General
     private Location lobbyLocation;
 
-    // Settings
     private boolean hidePlayer;
     private boolean actionBarEnabled;
     private boolean disableChat;
     private boolean disableHunger;
     private boolean disableDamage;
 
-    // Hiders
     private boolean hideStream;
 
-    // Items
     private boolean disableMove;
     private boolean disableDrop;
     private boolean disablePickup;
 
-    // World
     private int worldTime;
     private boolean doDaylightCycle;
     private boolean doWeatherCycle;
     private boolean doMobSpawning;
 
-    // Player
     private GameMode playerGameMode;
     private double playerHealth;
     private List<PotionEffect> playerEffects;
 
-    // Join
     private List<String> joinMessages;
     private String joinTitle;
     private String joinSubtitle;
     private boolean clearChat;
 
-    // Leave
     private boolean clearItems;
 
     public ConfigManager(Main plugin) {
@@ -80,61 +72,53 @@ public class ConfigManager {
     private void loadMainConfig() {
         FileConfiguration config = plugin.getConfig();
 
-        // Локация лобби
         loadLobbyLocation(config);
 
-        // Settings
         ConfigurationSection settings = config.getConfigurationSection("settings");
         if (settings != null) {
-            hidePlayer = settings.getBoolean("hide-player", false);
-            actionBarEnabled = settings.getBoolean("action-bar-settings", false);
-            disableChat = settings.getBoolean("disable-chat", true);
-            disableHunger = settings.getBoolean("disable-hunger", true);
-            disableDamage = settings.getBoolean("disable-damage", true);
+            hidePlayer = settings.getBoolean("hide-player");
+            actionBarEnabled = settings.getBoolean("action-bar");
+            disableChat = settings.getBoolean("disable-chat");
+            disableHunger = settings.getBoolean("disable-hunger");
+            disableDamage = settings.getBoolean("disable-damage");
         }
 
-        // Hiders
         ConfigurationSection hiders = config.getConfigurationSection("hiders");
         if (hiders != null) {
-            hideStream = hiders.getBoolean("hide-stream", true);
+            hideStream = hiders.getBoolean("hide-stream");
         }
 
-        // Items
         ConfigurationSection items = config.getConfigurationSection("items");
         if (items != null) {
-            disableMove = items.getBoolean("disable_move", true);
-            disableDrop = items.getBoolean("disable_drop", true);
-            disablePickup = items.getBoolean("disable_pickup", true);
+            disableMove = items.getBoolean("disable_move");
+            disableDrop = items.getBoolean("disable_drop");
+            disablePickup = items.getBoolean("disable_pickup");
         }
 
-        // World
         ConfigurationSection world = config.getConfigurationSection("world");
         if (world != null) {
             worldTime = world.getInt("time", 6000);
             ConfigurationSection rules = world.getConfigurationSection("rules");
             if (rules != null) {
-                doDaylightCycle = rules.getBoolean("doDaylightCycle", false);
-                doWeatherCycle = rules.getBoolean("doWeatherCycle", false);
-                doMobSpawning = rules.getBoolean("doMobSpawning", false);
+                doDaylightCycle = rules.getBoolean("doDaylightCycle");
+                doWeatherCycle = rules.getBoolean("doWeatherCycle");
+                doMobSpawning = rules.getBoolean("doMobSpawning");
             }
         }
 
-        // Player
         loadPlayerConfig(config);
 
-        // Join
         ConfigurationSection join = config.getConfigurationSection("join");
         if (join != null) {
             joinMessages = join.getStringList("join-message");
-            joinTitle = join.getString("join-title", "");
-            joinSubtitle = join.getString("join-subtitle", "");
-            clearChat = join.getBoolean("clear-chat", true);
+            joinTitle = join.getString("join-title");
+            joinSubtitle = join.getString("join-subtitle");
+            clearChat = join.getBoolean("clear-chat");
         }
 
-        // Leave
         ConfigurationSection leave = config.getConfigurationSection("leave");
         if (leave != null) {
-            clearItems = leave.getBoolean("clear-items", true);
+            clearItems = leave.getBoolean("clear-items");
         }
     }
 
@@ -163,7 +147,6 @@ public class ConfigManager {
     private void loadPlayerConfig(FileConfiguration config) {
         ConfigurationSection player = config.getConfigurationSection("player");
         if (player != null) {
-            // Игровой режим
             try {
                 playerGameMode = GameMode.valueOf(player.getString("gamemode", "ADVENTURE"));
             } catch (IllegalArgumentException e) {
@@ -171,10 +154,8 @@ public class ConfigManager {
                 playerGameMode = GameMode.ADVENTURE;
             }
 
-            // Здоровье
             playerHealth = Math.max(1.0, Math.min(20.0, player.getDouble("heath", 20.0)));
 
-            // Эффекты
             playerEffects.clear();
             List<String> effects = player.getStringList("effects");
             for (String effectStr : effects) {
@@ -204,7 +185,7 @@ public class ConfigManager {
             int duration = Integer.parseInt(parts[2]) == 0 ? Integer.MAX_VALUE : Integer.parseInt(parts[2]) * 20;
             boolean ambient = parts.length > 3 && Boolean.parseBoolean(parts[3]);
 
-            return new PotionEffect(type, duration, amplifier, ambient, true);
+            return new PotionEffect(type, duration, amplifier, ambient, false);
 
         } catch (Exception e) {
             plugin.getLogger().warning("Ошибка парсинга эффекта: " + effectStr);
@@ -244,11 +225,9 @@ public class ConfigManager {
         player.setGameMode(playerGameMode);
         player.setHealth(playerHealth);
 
-        // Убираем все эффекты
         player.getActivePotionEffects().forEach(effect ->
                 player.removePotionEffect(effect.getType()));
 
-        // Добавляем новые эффекты
         playerEffects.forEach(player::addPotionEffect);
     }
 }

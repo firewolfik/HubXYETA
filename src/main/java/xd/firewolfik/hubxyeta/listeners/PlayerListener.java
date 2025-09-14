@@ -1,5 +1,6 @@
 package xd.firewolfik.hubxyeta.listeners;
 
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -24,6 +25,7 @@ import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
+import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,8 +34,6 @@ public class PlayerListener implements Listener {
     private final Main plugin;
     private final ConfigManager config;
     private final ItemsManager itemsManager;
-
-    // Храним таски для каждого игрока
     private final Map<Player, BukkitTask> actionBarTasks = new HashMap<>();
 
     public PlayerListener(Main plugin) {
@@ -46,44 +46,34 @@ public class PlayerListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Скрытие сообщения о входе
         if (config.isHideStream()) {
             event.setJoinMessage(null);
         }
 
-        // Скрытие игроков
         if (config.isHidePlayer()) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> hidePlayersForPlayer(player));
         }
 
-        // Телепорт в лобби
         if (config.isLobbyLocationSet()) {
             player.teleport(config.getSafeLobbyLocation());
         } else {
             plugin.getLogger().warning("Игрок " + player.getName() + " зашел, но спавн лобби не установлен!");
         }
 
-        // Настройка игрока
         config.setupPlayer(player);
 
-        // Выдача предметов
         itemsManager.giveAllItems(player);
 
-        // Очистка чата
         if (config.isClearChat()) {
             clearPlayerChat(player);
         }
 
-        // Сообщения при входе
         sendJoinMessages(player);
 
-        // Title при входе
         sendJoinTitle(player);
 
-        // Настройка мира
         config.setupWorld(player.getWorld());
 
-        // Action Bar - запускаем автоматически для всех игроков
         if (config.isActionBarEnabled()) {
             startActionBar(player);
         }
@@ -102,9 +92,6 @@ public class PlayerListener implements Listener {
         if (config.isClearItems()) {
             player.getInventory().clear();
         }
-
-        // Остановка Action Bar таски для этого игрока
-        stopActionBar(player);
     }
 
     private void hidePlayersForPlayer(Player newPlayer) {
@@ -159,18 +146,14 @@ public class PlayerListener implements Listener {
     public void onJumpVoid(PlayerMoveEvent event) {
         Player player = event.getPlayer();
 
-        // Получаем высоту войда из конфига (по умолчанию -64)
         double voidHeight = -64.0;
 
         if (event.getTo() != null && player.getLocation().getY() <= voidHeight) {
-            // Убираем всех пассажиров игрока (если есть)
             player.getPassengers().forEach(player::removePassenger);
 
-            // Телепортируем в лобби
             if (config.isLobbyLocationSet()) {
                 player.teleport(config.getSafeLobbyLocation());
 
-                // Отправляем сообщение о войде с цветами
                 String message = plugin.getMessagesConfig().getString("messages.no-void");
                 if (message != null) {
                     player.sendMessage(ColorUtil.getInstance().translateColor(message));
@@ -213,20 +196,17 @@ public class PlayerListener implements Listener {
 
         ItemStack item = event.getCurrentItem();
 
-        // Проверяем, является ли предмет предметом лобби
         if (itemsManager.isLobbyItem(item)) {
             event.setCancelled(true);
             return;
         }
 
-        // Проверяем предмет в курсоре
         ItemStack cursor = event.getCursor();
         if (itemsManager.isLobbyItem(cursor)) {
             event.setCancelled(true);
             return;
         }
 
-        // Запрещаем перенос лобби предметов в крафт
         if (event.getInventory().getType() == InventoryType.CRAFTING ||
                 event.getInventory().getType() == InventoryType.WORKBENCH) {
 
@@ -298,9 +278,6 @@ public class PlayerListener implements Listener {
     }
 
     private void startActionBar(Player player) {
-        // Останавливаем предыдущую таску если она есть
-        stopActionBar(player);
-
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -310,36 +287,29 @@ public class PlayerListener implements Listener {
                     return;
                 }
 
-                String message = plugin.getMessagesConfig().getString("messages.action-bar");
-                if (message != null && !message.isEmpty()) {
-                    // Заменяем плейсхолдеры
-                    message = message.replace("%players%", String.valueOf(Bukkit.getOnlinePlayers().size()));
-                    message = ColorUtil.getInstance().translateColor(message);
-
-                    // Отправляем action bar сообщение
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                            TextComponent.fromLegacyText(message));
+                String actionBarMessage = plugin.getMessagesConfig().getString("messages.action-bar");
+                if (actionBarMessage == null || actionBarMessage.isEmpty()) {
+                    plugin.getLogger().warning("Сообщение для Action Bar не найдено или пустое.");
                 }
+
+                String message = actionBarMessage
+                        .replace("%player%", player.getName())
+                        .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
+
+                player.sendActionBar(ColorUtil.getInstance().translateColor(message));
             }
-        }.runTaskTimerAsynchronously(plugin,0L, 5L);
+        }.runTaskTimer(plugin, 0L, 20);
 
-        // Сохраняем таску для этого игрока
         actionBarTasks.put(player, task);
-    }
-
-    private void stopActionBar(Player player) {
-        BukkitTask task = actionBarTasks.remove(player);
-        if (task != null) {
-            task.cancel();
-        }
     }
 
     public void stopAllActionBars() {
         actionBarTasks.values().forEach(BukkitTask::cancel);
         actionBarTasks.clear();
     }
+
     public void restartAllActionBars() {
-        if (config.isActionBarEnabled()) {
+        if (plugin.getConfig().getBoolean("action-bar.enabled")) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 startActionBar(player);
             }
