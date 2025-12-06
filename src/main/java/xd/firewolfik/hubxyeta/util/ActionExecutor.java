@@ -32,7 +32,6 @@ public class ActionExecutor {
             return;
         }
 
-        // Заменяем плейсхолдеры
         String parsedAction = action.replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
                 .replace("%NL%", "\n");
