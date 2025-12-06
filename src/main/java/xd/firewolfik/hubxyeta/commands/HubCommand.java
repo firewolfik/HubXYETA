@@ -96,6 +96,12 @@ public class HubCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ColorUtil.getInstance().translateColor(itemsMessage));
             }
 
+            String broadcastsMessage = plugin.getMessagesConfig().getString("messages.reload-broadcasts");
+            if (broadcastsMessage != null) {
+                broadcastsMessage = broadcastsMessage.replace("%broadcasts%", String.valueOf(plugin.getBroadcastManager().getBroadcasts().size()));
+                sender.sendMessage(ColorUtil.getInstance().translateColor(broadcastsMessage));
+            }
+
         } catch (Exception e) {
             String errorMessage = plugin.getMessagesConfig().getString("messages.reload-error");
             if (errorMessage != null) {
@@ -113,7 +119,7 @@ public class HubCommand implements CommandExecutor, TabCompleter {
 
     private void sendHelpMessage(CommandSender sender) {
         if (sender.hasPermission("hub.admin")) {
-            String helpHeaderMessage= plugin.getMessagesConfig().getString("messages.help-header");
+            String helpHeaderMessage = plugin.getMessagesConfig().getString("messages.help-header");
             if (helpHeaderMessage != null)
                 sender.sendMessage(ColorUtil.getInstance().translateColor(helpHeaderMessage));
             String helpSetspawn = plugin.getMessagesConfig().getString("messages.help-setspawn");

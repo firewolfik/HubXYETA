@@ -9,7 +9,9 @@ import xd.firewolfik.hubxyeta.commands.HubCommand;
 import xd.firewolfik.hubxyeta.commands.SpawnCommand;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.listeners.PlayerListener;
+import xd.firewolfik.hubxyeta.managers.BroadcastManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
+import xd.firewolfik.hubxyeta.util.UnloadUtil;
 
 import java.io.File;
 
@@ -18,20 +20,27 @@ public final class Main extends JavaPlugin {
 
     private ConfigManager configManager;
     private ItemsManager itemsManager;
+    private BroadcastManager broadcastManager;
     private FileConfiguration messagesConfig;
     private PlayerListener playerListener;
+    private UnloadUtil unloadUtil;
 
     @Override
     public void onEnable() {
-
         saveDefaultConfig();
         saveResource("items.yml", false);
         saveResource("messages.yml", false);
+        saveResource("broadcasts.yml", false);
 
         loadMessagesConfig();
 
         configManager = new ConfigManager(this);
         itemsManager = new ItemsManager(this);
+        broadcastManager = new BroadcastManager(this);
+        unloadUtil = new UnloadUtil(this);
+        playerListener = new PlayerListener(this);
+
+        getServer().getPluginManager().registerEvents(playerListener, this);
 
         getLogger().info(ChatColor.YELLOW + "#############################");
         getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.GREEN + "включен");
@@ -39,8 +48,6 @@ public final class Main extends JavaPlugin {
         getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/oooSwagParty");
         getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.1" + ChatColor.GRAY + " (Fix errors 14.09.25)");
         getLogger().info(ChatColor.YELLOW + "#############################");
-
-        getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
 
         registerCommands();
 
@@ -55,13 +62,14 @@ public final class Main extends JavaPlugin {
         getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/oooSwagParty");
         getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.1" + ChatColor.GRAY + " (Fix errors 14.09.25)");
         getLogger().info(ChatColor.YELLOW + "#############################");
+        broadcastManager.stopBroadcasting();
+        unloadUtil.unloadPlayerConfig();
     }
 
     private void registerCommands() {
         HubCommand hubCommand = new HubCommand(this);
         getCommand("hub").setExecutor(hubCommand);
         getCommand("hub").setTabCompleter(hubCommand);
-
         getCommand("spawn").setExecutor(new SpawnCommand(this));
     }
 
@@ -75,10 +83,12 @@ public final class Main extends JavaPlugin {
 
     public void reloadPlugin() {
         playerListener.stopAllActionBars();
+        broadcastManager.stopBroadcasting();
         reloadConfig();
         loadMessagesConfig();
         configManager.reloadConfigs();
         itemsManager.reloadItems();
+        broadcastManager.reloadBroadcasts();
         playerListener.restartAllActionBars();
         getLogger().info(ChatColor.WHITE +"[" + ChatColor.YELLOW + "Info" + ChatColor.WHITE + "]" + ChatColor.WHITE + " Плагин " + ChatColor.GREEN + "перезагружен");
     }

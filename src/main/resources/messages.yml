@@ -19,4 +19,5 @@ messages:
   reload-success: "&aКонфигурации успешно перезагружены!"
   reload-time: "&7Время выполнения: &f%time%ms"
   reload-items: "&7Загружено предметов: &f%items%"
+  reload-broadcasts: "&7Загружено объявлений: &f%broadcasts%"
   reload-error: "&cОшибка при перезагрузке: &f%error%"

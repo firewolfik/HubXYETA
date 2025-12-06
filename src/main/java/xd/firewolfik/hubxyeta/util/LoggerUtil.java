@@ -12,31 +12,15 @@ public class LoggerUtil {
     public LoggerUtil(Main plugin) {
         this.plugin = plugin;
     }
-
-    /**
-     * Логирует информационное сообщение
-     */
     public void info(String message) {
         plugin.getLogger().info(message);
     }
-
-    /**
-     * Логирует предупреждение
-     */
     public void warning(String message) {
         plugin.getLogger().warning(message);
     }
-
-    /**
-     * Логирует ошибку
-     */
     public void error(String message) {
         plugin.getLogger().severe(message);
     }
-
-    /**
-     * Логирует ошибку с исключением
-     */
     public void error(String message, Throwable throwable) {
         plugin.getLogger().log(Level.SEVERE, message, throwable);
     }
