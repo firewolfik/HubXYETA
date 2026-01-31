@@ -13,6 +13,7 @@ settings:
   disable-chat: true
   disable-hunger: true
   disable-damage: true
+  admin-bypass: true # Если true, администраторы с правом hub.admin могут обходить ограничения
 
 hiders:
   hide-stream: true # Скрытие сообщений о вступлении, уходе, смерти и т.д.
@@ -41,6 +42,7 @@ join:
   join-title: "&easd"
   join-subtitle: "&easd"
   clear-chat: true
+  first-join-msg: true
 
 leave:
   clear-items: true

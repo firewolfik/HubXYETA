@@ -35,6 +35,8 @@ public class ConfigManager {
     private boolean disableDrop;
     private boolean disablePickup;
 
+    private boolean adminBypass;
+
     private int worldTime;
     private boolean doDaylightCycle;
     private boolean doWeatherCycle;
@@ -48,6 +50,7 @@ public class ConfigManager {
     private String joinTitle;
     private String joinSubtitle;
     private boolean clearChat;
+    private boolean firstJoinMessageEnabled;
 
     private boolean clearItems;
 
@@ -81,6 +84,7 @@ public class ConfigManager {
             disableChat = settings.getBoolean("disable-chat");
             disableHunger = settings.getBoolean("disable-hunger");
             disableDamage = settings.getBoolean("disable-damage");
+            adminBypass = settings.getBoolean("admin-bypass");
         }
 
         ConfigurationSection hiders = config.getConfigurationSection("hiders");
@@ -114,6 +118,7 @@ public class ConfigManager {
             joinTitle = join.getString("join-title");
             joinSubtitle = join.getString("join-subtitle");
             clearChat = join.getBoolean("clear-chat");
+            firstJoinMessageEnabled = join.getBoolean("first-join-msg");
         }
 
         ConfigurationSection leave = config.getConfigurationSection("leave");

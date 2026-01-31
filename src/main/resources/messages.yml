@@ -1,5 +1,6 @@
 messages:
   prefix: "&eХабХуйни"
+  player-not-found: "&cДолбоеб? &fЕго тут нету.."
   action-bar: "&eТы чо пычишь глаза чипыжишь? пидор"
   disable-chat: "&cЕблан. Зашел на режим, а потом хоть упишись."
   no-spawn: "&cБл. Админ мудак, спавн не поставил."
@@ -7,12 +8,23 @@ messages:
   no-void: "&4Куда улететь захотел? Хуй тебе!"
   spawn-set: "&aТы установил. А теперь соси"
   spawn: "&eТП ТП ТП ТП ТП"
+  spawn-teleported: "&fЕс чо тебя &eадмин &fтепнул"
+  spawn-teleported-admin: "&fНу тепнул ты его что ты хочешь услышать? &eМолодец?"
+
+  # Сообщение о первом входе игрока
+  first-join: "&fОПА НОВЫЙ СУЧЕНОК &e%player% &fзашел на сервер &e№%number%"
 
   # Сообщения для команд
   only-players: "&cиди нахуй"
   help-header: "&f---- &eХабХуйни &f----"
   help-setspawn: "&7/hub setspawn &f- прелипить дилдо"
   help-reload: "&7/hub reload &f- ребут"
+  help-broadcasts: "&7/hub broadcasts <on/off> &f- Включить/выключить рассылки"
+
+  # Сообщения для команды broadcasts
+  broadcasts-enabled: "&fфункция ебать мозни &aвключена"
+  broadcasts-disabled: "&fфункция ебать мозни &cвыключена"
+  broadcasts-usage: "&fКрч объясняю: &e/broadcasts on/off"
 
   # Сообщения для перезагрузки
   reload-start: "&6Перезагрузка конфигураций HubXyEta..."

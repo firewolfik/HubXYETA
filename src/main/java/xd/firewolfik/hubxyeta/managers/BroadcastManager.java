@@ -93,7 +93,6 @@ public class BroadcastManager {
             return null;
         }
 
-        // Загружаем hover и sound на уровне broadcast
         BroadcastHover broadcastHover = null;
         if (section.contains("hover")) {
             ConfigurationSection hoverSection = section.getConfigurationSection("hover");
@@ -178,7 +177,9 @@ public class BroadcastManager {
 
     private void sendBroadcast(Broadcast broadcast) {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            sendBroadcastToPlayer(player, broadcast);
+            if (plugin.getDatabaseManager().isBroadcastsEnabled(player.getUniqueId())) {
+                sendBroadcastToPlayer(player, broadcast);
+            }
         }
     }
 
@@ -189,11 +190,9 @@ public class BroadcastManager {
                     .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
                     .replace("%NL%", "\n");
 
-            // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Сначала переводим цвет (включая Hex), потом создаем компоненты
             message = ColorUtil.getInstance().translateColor(message);
             BaseComponent[] messageComponents = TextComponent.fromLegacyText(message);
 
-            // Применяем hover если он настроен
             if (broadcast.getHover() != null && broadcast.getHover().getText() != null &&
                     !broadcast.getHover().getText().isEmpty()) {
 
@@ -229,12 +228,10 @@ public class BroadcastManager {
             player.spigot().sendMessage(messageComponents);
         }
 
-        // Отправляем кнопку после всех сообщений
         if (broadcast.getButton() != null) {
             sendButton(player, broadcast.getButton());
         }
 
-        // Воспроизводим звук
         if (broadcast.getSound() != null) {
             playSound(player, broadcast.getSound());
         }

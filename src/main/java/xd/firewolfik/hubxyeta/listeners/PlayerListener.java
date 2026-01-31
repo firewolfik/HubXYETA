@@ -50,6 +50,24 @@ public class PlayerListener implements Listener {
             event.setJoinMessage(null);
         }
 
+        if (config.isFirstJoinMessageEnabled()) {
+            if (!plugin.getDatabaseManager().isPlayerExists(player.getUniqueId())) {
+                int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
+
+                if (playerNumber > 0) {
+                    String message = plugin.getMessagesConfig().getString("messages.first-join");
+                    if (message != null) {
+                        message = message
+                                .replace("%player%", player.getName())
+                                .replace("%number%", String.valueOf(playerNumber));
+
+                        String finalMessage = ColorUtil.getInstance().translateColor(message);
+                        Bukkit.broadcastMessage(finalMessage);
+                    }
+                }
+            }
+        }
+
         if (config.isHidePlayer()) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> hidePlayersForPlayer(player));
         }
@@ -83,12 +101,10 @@ public class PlayerListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
-        // Скрытие сообщения о выходе
         if (config.isHideStream()) {
             event.setQuitMessage(null);
         }
 
-        // Очистка предметов
         if (config.isClearItems()) {
             player.getInventory().clear();
         }
@@ -171,9 +187,14 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onAsyncPlayerChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+
+        if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
+            return;
+        }
+
         if (config.isDisableChat()) {
             event.setCancelled(true);
-            Player player = event.getPlayer();
             String message = plugin.getMessagesConfig().getString("messages.disable-chat");
             if (message != null) {
                 player.sendMessage(ColorUtil.getInstance().translateColor(message));
@@ -183,6 +204,12 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+
+        if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
+            return;
+        }
+
         if (config.isDisableDrop()) {
             event.setCancelled(true);
         }
@@ -190,7 +217,11 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+
+        if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
             return;
         }
 
@@ -227,17 +258,37 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+
+        if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
+            return;
+        }
+
         event.setCancelled(true);
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
+        Player player = event.getPlayer();
+
+        if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
+            return;
+        }
+
         event.setCancelled(true);
     }
 
     @EventHandler
     public void onEntityPickupItem(EntityPickupItemEvent event) {
-        if (event.getEntity() instanceof Player && config.isDisablePickup()) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
+            return;
+        }
+
+        if (config.isDisablePickup()) {
             event.setCancelled(true);
         }
     }

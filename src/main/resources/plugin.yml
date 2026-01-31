@@ -2,13 +2,18 @@ name: HubXYETA
 main: xd.firewolfik.hubxyeta.Main
 
 authors: [ firewolfik ]
+website: firewolfik.lol
 
 version: '2.2'
 api-version: '1.16'
 
 commands:
   hub:
+    aliases: [хаб, хабхуета]
   spawn:
+    aliases: [спавн]
+  broadcast:
+    aliases: [объявления, автосообщения]
 
 permissions:
   hub.admin:

@@ -7,10 +7,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import xd.firewolfik.hubxyeta.commands.HubCommand;
 import xd.firewolfik.hubxyeta.commands.SpawnCommand;
+import xd.firewolfik.hubxyeta.commands.BroadcastCommand;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.listeners.PlayerListener;
 import xd.firewolfik.hubxyeta.managers.BroadcastManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
+import xd.firewolfik.hubxyeta.managers.DatabaseManager;
 import xd.firewolfik.hubxyeta.util.UnloadUtil;
 
 import java.io.File;
@@ -21,6 +23,7 @@ public final class Main extends JavaPlugin {
     private ConfigManager configManager;
     private ItemsManager itemsManager;
     private BroadcastManager broadcastManager;
+    private DatabaseManager databaseManager;
     private FileConfiguration messagesConfig;
     private PlayerListener playerListener;
     private UnloadUtil unloadUtil;
@@ -34,6 +37,9 @@ public final class Main extends JavaPlugin {
 
         loadMessagesConfig();
 
+        databaseManager = new DatabaseManager(this);
+        databaseManager.initialize();
+
         configManager = new ConfigManager(this);
         itemsManager = new ItemsManager(this);
         broadcastManager = new BroadcastManager(this);
@@ -46,7 +52,7 @@ public final class Main extends JavaPlugin {
         getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.GREEN + "включен");
         getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik");
         getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/oooSwagParty");
-        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.1" + ChatColor.GRAY + " (Fix errors 14.09.25)");
+        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.2" + ChatColor.GRAY + " (Admin bypass & spawn update 26.01.25)");
         getLogger().info(ChatColor.YELLOW + "#############################");
 
         registerCommands();
@@ -60,17 +66,27 @@ public final class Main extends JavaPlugin {
         getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.RED + "выключен");
         getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik");
         getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/oooSwagParty");
-        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.1" + ChatColor.GRAY + " (Fix errors 14.09.25)");
+        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.2" + ChatColor.GRAY + " (Admin bypass & spawn update 26.01.25)");
         getLogger().info(ChatColor.YELLOW + "#############################");
         broadcastManager.stopBroadcasting();
         unloadUtil.unloadPlayerConfig();
+        if (databaseManager != null) {
+            databaseManager.close();
+        }
     }
 
     private void registerCommands() {
         HubCommand hubCommand = new HubCommand(this);
         getCommand("hub").setExecutor(hubCommand);
         getCommand("hub").setTabCompleter(hubCommand);
-        getCommand("spawn").setExecutor(new SpawnCommand(this));
+
+        SpawnCommand spawnCommand = new SpawnCommand(this);
+        getCommand("spawn").setExecutor(spawnCommand);
+        getCommand("spawn").setTabCompleter(spawnCommand);
+
+        BroadcastCommand broadcastCommand = new BroadcastCommand(this);
+        getCommand("broadcast").setExecutor(broadcastCommand);
+        getCommand("broadcast").setTabCompleter(broadcastCommand);
     }
 
     private void loadMessagesConfig() {
@@ -92,6 +108,7 @@ public final class Main extends JavaPlugin {
         playerListener.restartAllActionBars();
         getLogger().info(ChatColor.WHITE +"[" + ChatColor.YELLOW + "Info" + ChatColor.WHITE + "]" + ChatColor.WHITE + " Плагин " + ChatColor.GREEN + "перезагружен");
     }
+
     public FileConfiguration getMessagesConfig() {
         return messagesConfig;
     }
