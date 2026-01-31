@@ -29,7 +29,7 @@ public class BroadcastCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0) {
-            String message = plugin.getMessagesConfig().getString("messages.broadcast-usage");
+            String message = plugin.getMessagesConfig().getString("messages.broadcasts-usage");
             if (message != null) {
                 sender.sendMessage(ColorUtil.getInstance().translateColor(message));
             }
@@ -41,20 +41,20 @@ public class BroadcastCommand implements CommandExecutor, TabCompleter {
         switch (action) {
             case "on" -> {
                 plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), true);
-                String message = plugin.getMessagesConfig().getString("messages.broadcast-enabled");
+                String message = plugin.getMessagesConfig().getString("messages.broadcasts-enabled");
                 if (message != null) {
                     player.sendMessage(ColorUtil.getInstance().translateColor(message));
                 }
             }
             case "off" -> {
                 plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), false);
-                String message = plugin.getMessagesConfig().getString("messages.broadcast-disabled");
+                String message = plugin.getMessagesConfig().getString("messages.broadcasts-disabled");
                 if (message != null) {
                     player.sendMessage(ColorUtil.getInstance().translateColor(message));
                 }
             }
             default -> {
-                String message = plugin.getMessagesConfig().getString("messages.broadcast-usage");
+                String message = plugin.getMessagesConfig().getString("messages.broadcasts-usage");
                 if (message != null) {
                     player.sendMessage(ColorUtil.getInstance().translateColor(message));
                 }
