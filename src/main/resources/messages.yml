@@ -12,7 +12,7 @@ messages:
   spawn-teleported-admin: "&fНу тепнул ты его что ты хочешь услышать? &eМолодец?"
 
   # Сообщение о первом входе игрока
-  first-join: "&fОПА НОВЫЙ СУЧЕНОК &e%player% &fзашел на сервер &e№%number%"
+  first-join-msg: "&fОПА НОВЫЙ СУЧЕНОК &e%player% &fзашел на сервер &e№%number%"
 
   # Сообщения для команд
   only-players: "&cиди нахуй"
