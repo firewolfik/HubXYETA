@@ -55,7 +55,7 @@ public class PlayerListener implements Listener {
                 int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
                 if (playerNumber > 0) {
-                    String message = plugin.getMessagesConfig().getString("messages.first-join");
+                    String message = plugin.getMessagesConfig().getString("messages.first-join-msg");
                     if (message != null) {
                         message = message
                                 .replace("%player%", player.getName())
