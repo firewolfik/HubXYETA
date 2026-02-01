@@ -1,9 +1,5 @@
 package xd.firewolfik.hubxyeta.listeners;
 
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,7 +21,6 @@ import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
-import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,7 +50,7 @@ public class PlayerListener implements Listener {
                 int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
                 if (playerNumber > 0) {
-                    String message = plugin.getMessagesConfig().getString("messages.first-join-msg");
+                    String message = plugin.getMessagesConfig().getString("messages.first-join");
                     if (message != null) {
                         message = message
                                 .replace("%player%", player.getName())

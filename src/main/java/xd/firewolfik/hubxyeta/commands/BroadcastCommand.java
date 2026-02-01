@@ -9,7 +9,6 @@ import xd.firewolfik.hubxyeta.Main;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class BroadcastCommand implements CommandExecutor, TabCompleter {
@@ -28,39 +27,25 @@ public class BroadcastCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length == 0) {
+        if (args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("toggle"))) {
+            boolean currentStatus = plugin.getDatabaseManager().isBroadcastsEnabled(player.getUniqueId());
+
+            boolean newStatus = !currentStatus;
+            plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), newStatus);
+
+            String messageKey = newStatus ? "messages.broadcasts-enabled" : "messages.broadcasts-disabled";
+            String message = plugin.getMessagesConfig().getString(messageKey);
+            if (message != null) {
+                player.sendMessage(ColorUtil.getInstance().translateColor(message));
+            }
+        } else {
             String message = plugin.getMessagesConfig().getString("messages.broadcasts-usage");
             if (message != null) {
-                sender.sendMessage(ColorUtil.getInstance().translateColor(message));
-            }
-            return true;
-        }
-
-        String action = args[0].toLowerCase();
-
-        switch (action) {
-            case "on" -> {
-                plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), true);
-                String message = plugin.getMessagesConfig().getString("messages.broadcasts-enabled");
-                if (message != null) {
-                    player.sendMessage(ColorUtil.getInstance().translateColor(message));
-                }
-            }
-            case "off" -> {
-                plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), false);
-                String message = plugin.getMessagesConfig().getString("messages.broadcasts-disabled");
-                if (message != null) {
-                    player.sendMessage(ColorUtil.getInstance().translateColor(message));
-                }
-            }
-            default -> {
-                String message = plugin.getMessagesConfig().getString("messages.broadcasts-usage");
-                if (message != null) {
-                    player.sendMessage(ColorUtil.getInstance().translateColor(message));
-                }
+                player.sendMessage(ColorUtil.getInstance().translateColor(message));
+            } else {
+                player.sendMessage(ColorUtil.getInstance().translateColor("&cИспользование: &e/broadcast [toggle]"));
             }
         }
-
         return true;
     }
 
@@ -69,16 +54,11 @@ public class BroadcastCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> options = Arrays.asList("on", "off");
             String input = args[0].toLowerCase();
-
-            for (String option : options) {
-                if (option.startsWith(input)) {
-                    completions.add(option);
-                }
+            if ("toggle".startsWith(input)) {
+                completions.add("toggle");
             }
         }
-
         return completions;
     }
 }
