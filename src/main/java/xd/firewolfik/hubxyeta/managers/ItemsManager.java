@@ -17,10 +17,7 @@ import xd.firewolfik.hubxyeta.util.ActionExecutor;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Getter
 public class ItemsManager {
@@ -29,11 +26,13 @@ public class ItemsManager {
     private final ActionExecutor actionExecutor;
     private FileConfiguration itemsConfig;
     private Map<String, LobbyItem> lobbyItems;
+    private Map<UUID, Map<String, Long>> cooldowns;
 
     public ItemsManager(Main plugin) {
         this.plugin = plugin;
         this.actionExecutor = new ActionExecutor(plugin);
         this.lobbyItems = new HashMap<>();
+        this.cooldowns = new HashMap<>();
         loadItemsConfig();
     }
 
@@ -79,12 +78,14 @@ public class ItemsManager {
 
     private LobbyItem createLobbyItem(String id, ConfigurationSection section) {
         try {
-            String name = section.getString("name", "§7Предмет");
+            String name = section.getString("name");
             List<String> lore = section.getStringList("lore");
-            String materialName = section.getString("material", "PAPER").toUpperCase();
+            String materialName = section.getString("material").toUpperCase();
             int slot = section.getInt("slot", 0);
             int amount = Math.max(1, section.getInt("amount", 1));
             List<String> actions = section.getStringList("actions");
+            int cooldown = section.getInt("cooldown", 0);
+            String cooldownMessage = section.getString("cooldown-message");
 
             Material material;
             try {
@@ -130,7 +131,7 @@ public class ItemsManager {
             meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
 
-            return new LobbyItem(id, item, slot, actions);
+            return new LobbyItem(id, item, slot, actions, cooldown, cooldownMessage);
 
         } catch (Exception e) {
             plugin.getLogger().severe("Критическая ошибка создания предмета " + id + ": " + e.getMessage());
@@ -219,6 +220,21 @@ public class ItemsManager {
         }
     }
 
+    public void giveItemToSlot(Player player, String itemId, int slot) {
+        LobbyItem item = lobbyItems.get(itemId);
+        if (item != null) {
+            if (slot < 0 || slot > 35) {
+                plugin.getLogger().warning("Неверный слот " + slot + " для предмета " + itemId);
+                slot = 0;
+            }
+
+            player.getInventory().setItem(slot, item.getItem().clone());
+            player.updateInventory();
+        } else {
+            plugin.getLogger().warning("Попытка выдать несуществующий предмет: " + itemId);
+        }
+    }
+
     private void giveItem(Player player, LobbyItem lobbyItem) {
         int slot = lobbyItem.getSlot();
 
@@ -232,9 +248,67 @@ public class ItemsManager {
 
     public void executeItemActions(Player player, String itemId) {
         LobbyItem item = lobbyItems.get(itemId);
-        if (item != null && item.getActions() != null && !item.getActions().isEmpty()) {
+        if (item == null) {
+            return;
+        }
+
+        // Проверка кулдауна
+        if (item.getCooldown() > 0) {
+            if (isOnCooldown(player, itemId)) {
+                long remaining = getRemainingCooldown(player, itemId);
+                String message = item.getCooldownMessage()
+                        .replace("%time%", String.valueOf(remaining));
+                player.sendMessage(ColorUtil.getInstance().translateColor(message));
+                return;
+            }
+            setCooldown(player, itemId);
+        }
+
+        if (item.getActions() != null && !item.getActions().isEmpty()) {
             actionExecutor.executeActions(player, item.getActions());
         }
+    }
+
+    private boolean isOnCooldown(Player player, String itemId) {
+        if (!cooldowns.containsKey(player.getUniqueId())) {
+            return false;
+        }
+
+        Map<String, Long> playerCooldowns = cooldowns.get(player.getUniqueId());
+        if (!playerCooldowns.containsKey(itemId)) {
+            return false;
+        }
+
+        long cooldownEnd = playerCooldowns.get(itemId);
+        return System.currentTimeMillis() < cooldownEnd;
+    }
+
+    private long getRemainingCooldown(Player player, String itemId) {
+        if (!cooldowns.containsKey(player.getUniqueId())) {
+            return 0;
+        }
+
+        Map<String, Long> playerCooldowns = cooldowns.get(player.getUniqueId());
+        if (!playerCooldowns.containsKey(itemId)) {
+            return 0;
+        }
+
+        long cooldownEnd = playerCooldowns.get(itemId);
+        long remaining = (cooldownEnd - System.currentTimeMillis()) / 1000;
+        return Math.max(0, remaining);
+    }
+
+    private void setCooldown(Player player, String itemId) {
+        LobbyItem item = lobbyItems.get(itemId);
+        if (item == null || item.getCooldown() <= 0) {
+            return;
+        }
+
+        cooldowns.putIfAbsent(player.getUniqueId(), new HashMap<>());
+        Map<String, Long> playerCooldowns = cooldowns.get(player.getUniqueId());
+
+        long cooldownEnd = System.currentTimeMillis() + (item.getCooldown() * 1000L);
+        playerCooldowns.put(itemId, cooldownEnd);
     }
 
     public String getLobbyItemId(ItemStack item) {
@@ -279,12 +353,16 @@ public class ItemsManager {
         private final ItemStack item;
         private final int slot;
         private final List<String> actions;
+        private final int cooldown;
+        private final String cooldownMessage;
 
-        public LobbyItem(String id, ItemStack item, int slot, List<String> actions) {
+        public LobbyItem(String id, ItemStack item, int slot, List<String> actions, int cooldown, String cooldownMessage) {
             this.id = id;
             this.item = item.clone();
             this.slot = slot;
             this.actions = actions != null ? new ArrayList<>(actions) : new ArrayList<>();
+            this.cooldown = cooldown;
+            this.cooldownMessage = cooldownMessage;
         }
 
         public ItemStack getItemClone() {

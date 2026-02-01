@@ -27,6 +27,7 @@ public class DatabaseManager {
 
             connection = DriverManager.getConnection(url);
 
+            // Создаем таблицу с правильной структурой
             try (Statement statement = connection.createStatement()) {
                 statement.executeUpdate(
                         "CREATE TABLE IF NOT EXISTS players (" +
@@ -34,16 +35,40 @@ public class DatabaseManager {
                                 "name TEXT NOT NULL," +
                                 "player_number INTEGER NOT NULL," +
                                 "broadcasts_enabled INTEGER DEFAULT 1," +
+                                "hide_players INTEGER DEFAULT 0," +
                                 "first_join TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                                 ")"
                 );
             }
+
+            // Проверяем и добавляем недостающие колонки если таблица уже существовала
+            migrateDatabase();
 
             plugin.getLogger().info("База данных успешно инициализирована!");
 
         } catch (SQLException e) {
             plugin.getLogger().severe("Ошибка при инициализации базы данных: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void migrateDatabase() {
+        try {
+            DatabaseMetaData metaData = connection.getMetaData();
+
+            // Проверяем существование колонки hide_players
+            ResultSet columns = metaData.getColumns(null, null, "players", "hide_players");
+            if (!columns.next()) {
+                // Колонка не существует, добавляем её
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("ALTER TABLE players ADD COLUMN hide_players INTEGER DEFAULT 0");
+                    plugin.getLogger().info("Добавлена колонка hide_players в таблицу players");
+                }
+            }
+            columns.close();
+
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Ошибка при миграции базы данных: " + e.getMessage());
         }
     }
 
@@ -64,7 +89,7 @@ public class DatabaseManager {
             int playerNumber = getNextPlayerNumber();
 
             try (PreparedStatement statement = connection.prepareStatement(
-                    "INSERT INTO players (uuid, name, player_number, broadcasts_enabled) VALUES (?, ?, ?, 1)")) {
+                    "INSERT INTO players (uuid, name, player_number, broadcasts_enabled, hide_players) VALUES (?, ?, ?, 1, 0)")) {
                 statement.setString(1, uuid.toString());
                 statement.setString(2, name);
                 statement.setInt(3, playerNumber);
@@ -145,6 +170,32 @@ public class DatabaseManager {
             statement.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().severe("Ошибка при изменении статуса рассылки: " + e.getMessage());
+        }
+    }
+
+    public boolean isHidePlayersEnabled(UUID uuid) {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT hide_players FROM players WHERE uuid = ?")) {
+            statement.setString(1, uuid.toString());
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("hide_players") == 1;
+            }
+            return false; // По умолчанию выключено
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Ошибка при проверке статуса скрытия игроков: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public void setHidePlayersEnabled(UUID uuid, boolean enabled) {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE players SET hide_players = ? WHERE uuid = ?")) {
+            statement.setInt(1, enabled ? 1 : 0);
+            statement.setString(2, uuid.toString());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Ошибка при изменении статуса скрытия игроков: " + e.getMessage());
         }
     }
 

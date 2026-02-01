@@ -20,6 +20,10 @@ messages:
   help-setspawn: "&7/hub setspawn &f- прелипить дилдо"
   help-reload: "&7/hub reload &f- ребут"
   help-broadcasts: "&7/hub broadcasts <on/off> &f- Включить/выключить рассылки"
+  help-items: "&fкрч &e/hub items give/take &f- Управление предметами игроков"
+  items-usage-header: "&eкрч"
+  items-usage-give: "&fвот так &e/hub items give <игрок> <название_предмета> [слот]"
+  items-usage-take: "&fвот так &e/hub items take <игрок> <слот>"
 
   # Сообщения для команды broadcasts
   broadcasts-enabled: "&fфункция ебать мозни &aвключена"
