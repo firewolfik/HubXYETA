@@ -9,11 +9,8 @@ api-version: '1.16'
 
 commands:
   hub:
-    aliases: [хаб, хабхуета]
   spawn:
-    aliases: [спавн]
   broadcast:
-    aliases: [объявления, автосообщения]
 
 permissions:
   hub.admin:

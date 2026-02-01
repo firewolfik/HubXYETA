@@ -24,7 +24,7 @@ messages:
   # Сообщения для команды broadcasts
   broadcasts-enabled: "&fфункция ебать мозни &aвключена"
   broadcasts-disabled: "&fфункция ебать мозни &cвыключена"
-  broadcasts-usage: "&fКрч объясняю: &e/broadcasts on/off"
+  broadcasts-usage: "&fКрч объясняю: &e/broadcasts toggle"
 
   # Сообщения для перезагрузки
   reload-start: "&6Перезагрузка конфигураций HubXyEta..."
