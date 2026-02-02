@@ -1,5 +1,9 @@
 package xd.firewolfik.hubxyeta.listeners;
 
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,6 +35,7 @@ public class PlayerListener implements Listener {
     private final ConfigManager config;
     private final ItemsManager itemsManager;
     private final Map<Player, BukkitTask> actionBarTasks = new HashMap<>();
+    private final Map<Player, Boolean> actionBarPaused = new HashMap<>();
 
     public PlayerListener(Main plugin) {
         this.plugin = plugin;
@@ -51,7 +56,7 @@ public class PlayerListener implements Listener {
                 int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
                 if (playerNumber > 0) {
-                    String message = plugin.getMessagesConfig().getString("messages.first-join-msg");
+                    String message = plugin.getMessagesConfig().getString("messages.first-join");
                     if (message != null) {
                         message = message
                                 .replace("%player%", player.getName())
@@ -114,6 +119,12 @@ public class PlayerListener implements Listener {
         if (config.isClearItems()) {
             player.getInventory().clear();
         }
+
+        BukkitTask task = actionBarTasks.remove(player);
+        if (task != null) {
+            task.cancel();
+        }
+        actionBarPaused.remove(player);
     }
 
     private void hidePlayersForPlayer(Player newPlayer) {
@@ -341,12 +352,17 @@ public class PlayerListener implements Listener {
                 if (!player.isOnline()) {
                     cancel();
                     actionBarTasks.remove(player);
+                    actionBarPaused.remove(player);
+                    return;
+                }
+
+                if (actionBarPaused.getOrDefault(player, false)) {
                     return;
                 }
 
                 String actionBarMessage = plugin.getMessagesConfig().getString("messages.action-bar");
                 if (actionBarMessage == null || actionBarMessage.isEmpty()) {
-                    plugin.getLogger().warning("Сообщение для Action Bar не найдено или пустое.");
+                    return;
                 }
 
                 String message = actionBarMessage
@@ -358,11 +374,25 @@ public class PlayerListener implements Listener {
         }.runTaskTimer(plugin, 0L, 20);
 
         actionBarTasks.put(player, task);
+        actionBarPaused.put(player, false);
+    }
+
+    public boolean hasActionBar(Player player) {
+        return actionBarTasks.containsKey(player) && !actionBarTasks.get(player).isCancelled();
+    }
+
+    public void pauseActionBar(Player player) {
+        actionBarPaused.put(player, true);
+    }
+
+    public void resumeActionBar(Player player) {
+        actionBarPaused.put(player, false);
     }
 
     public void stopAllActionBars() {
         actionBarTasks.values().forEach(BukkitTask::cancel);
         actionBarTasks.clear();
+        actionBarPaused.clear();
     }
 
     public void restartAllActionBars() {

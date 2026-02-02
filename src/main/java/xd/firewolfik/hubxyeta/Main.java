@@ -6,9 +6,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import xd.firewolfik.hubxyeta.commands.HubCommand;
-import xd.firewolfik.hubxyeta.commands.PlayersCommand;
 import xd.firewolfik.hubxyeta.commands.SpawnCommand;
 import xd.firewolfik.hubxyeta.commands.BroadcastCommand;
+import xd.firewolfik.hubxyeta.commands.PlayersCommand;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.listeners.PlayerListener;
 import xd.firewolfik.hubxyeta.managers.BroadcastManager;
@@ -51,9 +51,9 @@ public final class Main extends JavaPlugin {
 
         getLogger().info(ChatColor.YELLOW + "#############################");
         getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.GREEN + "включен");
-        getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik");
-        getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/oooSwagParty");
-        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.2" + ChatColor.GRAY + " (Admin bypass & spawn update 26.01.25)");
+        getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik.lol");
+        getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/firewolfik");
+        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.3" + ChatColor.GRAY + " (02.02.2026)");
         getLogger().info(ChatColor.YELLOW + "#############################");
 
         registerCommands();
@@ -65,9 +65,9 @@ public final class Main extends JavaPlugin {
     public void onDisable() {
         getLogger().info(ChatColor.YELLOW + "#############################");
         getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.RED + "выключен");
-        getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik");
-        getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/oooSwagParty");
-        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.2" + ChatColor.GRAY + " (Admin bypass & spawn update 26.01.25)");
+        getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik.lol");
+        getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/firewolfik");
+        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.2" + ChatColor.GRAY + " (02.02.2026)");
         getLogger().info(ChatColor.YELLOW + "#############################");
         broadcastManager.stopBroadcasting();
         unloadUtil.unloadPlayerConfig();

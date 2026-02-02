@@ -45,7 +45,8 @@ Items:
     flags:
       - HIDE_ENCHANTS
     actions:
-      - "[CONSOLE] me я пидор"
+      - "[CONSOLE] me &fя пидор"
+      - "[ACTIONBAR] &eя пидор"
 
   player-hider:
     name: "&fВидимость игроков"

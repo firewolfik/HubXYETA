@@ -57,8 +57,20 @@ public class ActionExecutor {
 
         } else if (parsedAction.startsWith("[ACTIONBAR] ")) {
             String message = parsedAction.substring(12);
+
+            boolean hadActionBar = plugin.getPlayerListener().hasActionBar(player);
+            if (hadActionBar) {
+                plugin.getPlayerListener().pauseActionBar(player);
+            }
+
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
                     TextComponent.fromLegacyText(ColorUtil.getInstance().translateColor(message)));
+
+            if (hadActionBar) {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    plugin.getPlayerListener().resumeActionBar(player);
+                }, 60L);
+            }
 
         } else if (parsedAction.startsWith("[PLAYER] ")) {
             String command = parsedAction.substring(9);
