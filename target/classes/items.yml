@@ -1,0 +1,59 @@
+#    ╔═════════════════════════════════════════════════════════════╗
+#    ║                     Плейсхолдеры                            ║
+#    ║                                                             ║
+#    ║  * %prfx%   - Префикс плагина из messages.yml               ║
+#    ║  * %player% - Ник игрока                                    ║
+#    ║  * %online% - Онлайн сервера                                ║
+#    ║  * %NL%     - Новая сторока                                 ║
+#    ║                                                             ║
+#    ╚═════════════════════════════════════════════════════════════╝
+
+#  ╔═════════════════════════════════════════════════════════════════╗
+#  ║                                                                 ║
+#  ║  * "[MSG] msg"                  - Сообщение игроку              ║
+#  ║  * "[MM] msg"                   - Мини Сообщение игроку         ║
+#  ║  * "[BROADCAST] msg"            - Send broadcast message        ║
+#  ║                                                                 ║
+#  ║  * "[TITLE] msg;sub_msg"        - Тайтл игроку                  ║
+#  ║  * "[ACTIONBAR] msg"            - Актион бар игроку             ║
+#  ║                                                                 ║
+#  ║  * "[PLAYER] command"           - Выполнить команду от игрока   ║
+#  ║  * "[CONSOLE] command"          - Выполнить команду от консоли  ║
+#  ║                                                                 ║
+#  ║  * "[CONNECT] server"           - Переключится между режимом    ║
+#  ║  * "[TELEPORT_TO_SPAWN]"        - Телепорт на спавн             ║
+#  ║                                                                 ║
+#  ║  * "[HIDE_PLAYERS]"             - Скрыть игроков                ║
+#  ║  * "[SHOW_PLAYERS]"             - Показать игроков              ║
+#  ║                                                                 ║
+#  ║                                                                 ║
+#  ║  * "[SOUND] sound;volume;pitch" - Произвести звук игроку        ║
+#  ║                                                                 ║
+#  ╚═════════════════════════════════════════════════════════════════╝
+
+Items:
+  selector:
+    name: "&fВыбрать сервер"
+    lore: []
+    material: diamond_sword
+    slot: 4
+    amount: 1
+    enchantments:
+      - "DIG_SPEED:1"
+    # Флаги на предметы
+    # https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/inventory/ItemFlag.html
+    flags:
+      - HIDE_ENCHANTS
+    actions:
+      - "[CONSOLE] me я пидор"
+
+  player-hider:
+    name: "&fВидимость игроков"
+    lore: []
+    material: ENDER_EYE
+    slot: 8
+    amount: 1
+    cooldown: 4
+    cooldown-message: "&fпогоди &e%time% &fсек даун ебаный"
+    actions:
+      - "[PLAYER] players toggle"

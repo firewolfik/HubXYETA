@@ -1,0 +1,18 @@
+name: HubXYETA
+main: xd.firewolfik.hubxyeta.Main
+
+authors: [ firewolfik ]
+website: firewolfik.lol
+
+version: '2.3'
+api-version: '1.16'
+
+commands:
+  hub:
+  spawn:
+  broadcast:
+  players:
+
+permissions:
+  hub.admin:
+    default: op
