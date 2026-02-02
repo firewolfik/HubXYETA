@@ -21,6 +21,7 @@ import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
+import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public class PlayerListener implements Listener {
                 int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
                 if (playerNumber > 0) {
-                    String message = plugin.getMessagesConfig().getString("messages.first-join");
+                    String message = plugin.getMessagesConfig().getString("messages.first-join-msg");
                     if (message != null) {
                         message = message
                                 .replace("%player%", player.getName())
@@ -89,6 +90,16 @@ public class PlayerListener implements Listener {
 
         if (config.isActionBarEnabled()) {
             startActionBar(player);
+        }
+
+        if (plugin.getDatabaseManager().isHidePlayersEnabled(player.getUniqueId())) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    if (online != player) {
+                        player.hidePlayer(plugin, online);
+                    }
+                }
+            }, 5L);
         }
     }
 

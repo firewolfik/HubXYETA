@@ -47,30 +47,13 @@ Items:
     actions:
       - "[CONSOLE] me я пидор"
 
-  player-show:
-    name: "&fИгроки &aпоказаны"
+  player-hider:
+    name: "&fВидимость игроков"
     lore: []
-    material: green_dye
+    material: ENDER_EYE
     slot: 8
-    ammount: 1
+    amount: 1
+    cooldown: 4
+    cooldown-message: "&fпогоди &e%time% &fсек даун ебаный"
     actions:
-      - "[HIDE_PLAYERS]"
-      - "[CONSOLE] hub items take %player% 9"
-      - "[CONSOLE] hub items take %player% 8"
-      - "[CONSOLE] hub items give %player% player-show 9"
-      - "[CONSOLE] hub items give %player% player-hiden 8"
-      - "[MSG] &fигроков &7скрыл &fотъебись"
-
-  player-hiden:
-    name: "&fИгроки &7скрыты"
-    lore: [ ]
-    material: gray_dye
-    slot: 9
-    ammount: 1
-    actions:
-      - "[SHOW_PLAYERS]"
-      - "[CONSOLE] hub items take %player% 9"
-      - "[CONSOLE] hub items take %player% 8"
-      - "[CONSOLE] hub items give %player% player-show 8"
-      - "[CONSOLE] hub items give %player% player-hiden 9"
-      - "[MSG] &fигроков &aпоказал &fотъебись"
+      - "[PLAYER] players toggle"

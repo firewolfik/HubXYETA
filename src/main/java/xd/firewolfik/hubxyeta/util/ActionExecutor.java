@@ -84,11 +84,25 @@ public class ActionExecutor {
                 }
             }
 
+            plugin.getDatabaseManager().setHidePlayersEnabled(player.getUniqueId(), true);
+
+            String message = plugin.getMessagesConfig().getString("messages.players-hidden");
+            if (message != null && !message.isEmpty()) {
+                player.sendMessage(ColorUtil.getInstance().translateColor(message));
+            }
+
         } else if (parsedAction.equals("[SHOW_PLAYERS]")) {
             for (Player online : Bukkit.getOnlinePlayers()) {
                 if (online != player) {
                     player.showPlayer(plugin, online);
                 }
+            }
+
+            plugin.getDatabaseManager().setHidePlayersEnabled(player.getUniqueId(), false);
+
+            String message = plugin.getMessagesConfig().getString("messages.players-shown");
+            if (message != null && !message.isEmpty()) {
+                player.sendMessage(ColorUtil.getInstance().translateColor(message));
             }
 
         } else if (parsedAction.startsWith("[SOUND] ")) {

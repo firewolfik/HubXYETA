@@ -11,6 +11,7 @@ commands:
   hub:
   spawn:
   broadcast:
+  players:
 
 permissions:
   hub.admin:

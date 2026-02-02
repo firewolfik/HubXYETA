@@ -30,10 +30,15 @@ messages:
   broadcasts-disabled: "&fфункция ебать мозни &cвыключена"
   broadcasts-usage: "&fКрч объясняю: &e/broadcasts toggle"
 
+  # Сообщение для команды players
+  players-shown: "&fигроков &aпоказал &fотъебись"
+  players-hidden: "&fигроков &7скрыл &fотъебись"
+  players-usage: "&fкрч объясняю: &e/players toggle"
+
   # Сообщения для перезагрузки
-  reload-start: "&6Перезагрузка конфигураций HubXyEta..."
-  reload-success: "&aКонфигурации успешно перезагружены!"
-  reload-time: "&7Время выполнения: &f%time%ms"
-  reload-items: "&7Загружено предметов: &f%items%"
-  reload-broadcasts: "&7Загружено объявлений: &f%broadcasts%"
-  reload-error: "&cОшибка при перезагрузке: &f%error%"
+  reload-start: "&fНАЧИНАЕТСЯ &eВЗЛОМ ПИЗДЫ&f! &fПЕРЕЗАГРУЗКА!"
+  reload-success: "&fконфиг &eрелоднул &fдрочи дальше"
+  reload-time: "&fкрч по времени загружалось &e%time%ms"
+  reload-items: "&fзакинул &e%items% &fзакладок"
+  reload-broadcasts: "&fзагрузил &e%broadcasts% &fвроткастов"
+  reload-error: "&fОшибка при перезагрузке: &c%error%"

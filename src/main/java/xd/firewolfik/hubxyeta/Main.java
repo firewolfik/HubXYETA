@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import xd.firewolfik.hubxyeta.commands.HubCommand;
+import xd.firewolfik.hubxyeta.commands.PlayersCommand;
 import xd.firewolfik.hubxyeta.commands.SpawnCommand;
 import xd.firewolfik.hubxyeta.commands.BroadcastCommand;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
@@ -87,6 +88,10 @@ public final class Main extends JavaPlugin {
         BroadcastCommand broadcastCommand = new BroadcastCommand(this);
         getCommand("broadcast").setExecutor(broadcastCommand);
         getCommand("broadcast").setTabCompleter(broadcastCommand);
+
+        PlayersCommand playersCommand = new PlayersCommand(this);
+        getCommand("players").setExecutor(playersCommand);
+        getCommand("players").setTabCompleter(playersCommand);
     }
 
     private void loadMessagesConfig() {
