@@ -252,7 +252,6 @@ public class ItemsManager {
             return;
         }
 
-        // Проверка кулдауна
         if (item.getCooldown() > 0) {
             if (isOnCooldown(player, itemId)) {
                 long remaining = getRemainingCooldown(player, itemId);

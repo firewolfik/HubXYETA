@@ -27,7 +27,6 @@ public class DatabaseManager {
 
             connection = DriverManager.getConnection(url);
 
-            // Создаем таблицу с правильной структурой
             try (Statement statement = connection.createStatement()) {
                 statement.executeUpdate(
                         "CREATE TABLE IF NOT EXISTS players (" +
@@ -41,10 +40,7 @@ public class DatabaseManager {
                 );
             }
 
-            // Проверяем и добавляем недостающие колонки если таблица уже существовала
             migrateDatabase();
-
-            plugin.getLogger().info("База данных успешно инициализирована!");
 
         } catch (SQLException e) {
             plugin.getLogger().severe("Ошибка при инициализации базы данных: " + e.getMessage());
@@ -56,13 +52,10 @@ public class DatabaseManager {
         try {
             DatabaseMetaData metaData = connection.getMetaData();
 
-            // Проверяем существование колонки hide_players
             ResultSet columns = metaData.getColumns(null, null, "players", "hide_players");
             if (!columns.next()) {
-                // Колонка не существует, добавляем её
                 try (Statement statement = connection.createStatement()) {
                     statement.executeUpdate("ALTER TABLE players ADD COLUMN hide_players INTEGER DEFAULT 0");
-                    plugin.getLogger().info("Добавлена колонка hide_players в таблицу players");
                 }
             }
             columns.close();
@@ -155,7 +148,7 @@ public class DatabaseManager {
             if (rs.next()) {
                 return rs.getInt("broadcasts_enabled") == 1;
             }
-            return true; // По умолчанию включено
+            return true;
         } catch (SQLException e) {
             plugin.getLogger().severe("Ошибка при проверке статуса рассылки: " + e.getMessage());
             return true;
@@ -181,7 +174,7 @@ public class DatabaseManager {
             if (rs.next()) {
                 return rs.getInt("hide_players") == 1;
             }
-            return false; // По умолчанию выключено
+            return false;
         } catch (SQLException e) {
             plugin.getLogger().severe("Ошибка при проверке статуса скрытия игроков: " + e.getMessage());
             return false;

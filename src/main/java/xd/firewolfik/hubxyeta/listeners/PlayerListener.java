@@ -21,7 +21,6 @@ import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
-import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,20 +46,16 @@ public class PlayerListener implements Listener {
             event.setJoinMessage(null);
         }
 
-        if (config.isFirstJoinMessageEnabled()) {
-            if (!plugin.getDatabaseManager().isPlayerExists(player.getUniqueId())) {
-                int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
+        if (!plugin.getDatabaseManager().isPlayerExists(player.getUniqueId())) {
+            int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
-                if (playerNumber > 0) {
-                    String message = plugin.getMessagesConfig().getString("messages.first-join");
-                    if (message != null) {
-                        message = message
-                                .replace("%player%", player.getName())
-                                .replace("%number%", String.valueOf(playerNumber));
-
-                        String finalMessage = ColorUtil.getInstance().translateColor(message);
-                        Bukkit.broadcastMessage(finalMessage);
-                    }
+            if (playerNumber > 0 && config.isFirstJoinMessageEnabled()) {
+                String message = plugin.getMessagesConfig().getString("messages.first-join");
+                if (message != null) {
+                    message = message
+                            .replace("%player%", player.getName())
+                            .replace("%number%", String.valueOf(playerNumber));
+                    Bukkit.broadcastMessage(ColorUtil.getInstance().translateColor(message));
                 }
             }
         }
