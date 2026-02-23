@@ -35,6 +35,10 @@ messages:
   players-hidden: "&fигроков &7скрыл &fотъебись"
   players-usage: "&fкрч объясняю: &e/players toggle"
 
+  links-msg:
+    - "докс"
+    - "ссылка на онлифанс: onlyfans"
+
   # Сообщения для перезагрузки
   reload-start: "&fНАЧИНАЕТСЯ &eВЗЛОМ ПИЗДЫ&f! &fПЕРЕЗАГРУЗКА!"
   reload-success: "&fконфиг &eрелоднул &fдрочи дальше"

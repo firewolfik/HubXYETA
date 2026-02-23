@@ -1,9 +1,5 @@
 package xd.firewolfik.hubxyeta.listeners;
 
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -68,6 +64,8 @@ public class PlayerListener implements Listener {
                 }
             }
         }
+
+        player.getInventory().setHeldItemSlot(config.getSelectedSlot());
 
         if (config.isHidePlayer()) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> hidePlayersForPlayer(player));

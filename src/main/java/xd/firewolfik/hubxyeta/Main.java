@@ -5,10 +5,7 @@ import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-import xd.firewolfik.hubxyeta.commands.HubCommand;
-import xd.firewolfik.hubxyeta.commands.SpawnCommand;
-import xd.firewolfik.hubxyeta.commands.BroadcastCommand;
-import xd.firewolfik.hubxyeta.commands.PlayersCommand;
+import xd.firewolfik.hubxyeta.commands.*;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.listeners.PlayerListener;
 import xd.firewolfik.hubxyeta.managers.BroadcastManager;
@@ -92,6 +89,9 @@ public final class Main extends JavaPlugin {
         PlayersCommand playersCommand = new PlayersCommand(this);
         getCommand("players").setExecutor(playersCommand);
         getCommand("players").setTabCompleter(playersCommand);
+
+        LinksCommand linksCommand = new LinksCommand(this);
+        getCommand("links").setExecutor(linksCommand);
     }
 
     private void loadMessagesConfig() {

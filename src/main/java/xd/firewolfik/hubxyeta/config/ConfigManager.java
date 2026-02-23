@@ -130,17 +130,17 @@ public class ConfigManager {
     private void loadLobbyLocation(FileConfiguration config) {
         ConfigurationSection locationHub = config.getConfigurationSection("general.locationHub");
         if (locationHub != null) {
-            String worldName = locationHub.getString("world", "world");
+            String worldName = locationHub.getString("world");
             World world = Bukkit.getWorld(worldName);
 
             if (world != null) {
                 lobbyLocation = new Location(
                         world,
-                        locationHub.getDouble("x", 0),
-                        locationHub.getDouble("y", 100),
-                        locationHub.getDouble("z", 0),
-                        (float) locationHub.getDouble("yaw", 0),
-                        (float) locationHub.getDouble("pitch", 0)
+                        locationHub.getDouble("x"),
+                        locationHub.getDouble("y"),
+                        locationHub.getDouble("z"),
+                        (float) locationHub.getDouble("yaw"),
+                        (float) locationHub.getDouble("pitch")
                 );
             } else {
                 plugin.getLogger().warning("Мир '" + worldName + "' не найден!");
@@ -207,6 +207,11 @@ public class ConfigManager {
         plugin.getConfig().set("general.locationHub.pitch", location.getPitch());
         plugin.saveConfig();
         loadLobbyLocation(plugin.getConfig());
+    }
+
+    public int getSelectedSlot() {
+        int slot = plugin.getConfig().getInt("settings.selected-slot");
+        return Math.max(0, Math.min(8, slot));
     }
 
     public boolean isLobbyLocationSet() {

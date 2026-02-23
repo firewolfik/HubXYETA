@@ -4,7 +4,7 @@ main: xd.firewolfik.hubxyeta.Main
 authors: [ firewolfik ]
 website: firewolfik.lol
 
-version: '2.3'
+version: '2.4'
 api-version: '1.16'
 
 commands:
@@ -12,6 +12,7 @@ commands:
   spawn:
   broadcast:
   players:
+  links:
 
 permissions:
   hub.admin:

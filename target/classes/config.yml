@@ -13,6 +13,7 @@ settings:
   disable-chat: true
   disable-hunger: true
   disable-damage: true
+  selected-slot: 4
   admin-bypass: true # Если true, администраторы с правом hub.admin могут обходить ограничения
 
 hiders:
