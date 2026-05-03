@@ -97,6 +97,12 @@ public class DatabaseManager {
         }
     }
 
+    public void ensurePlayerExists(UUID uuid, String name) {
+        if (!isPlayerExists(uuid)) {
+            addPlayer(uuid, name);
+        }
+    }
+
     private int getNextPlayerNumber() {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT MAX(player_number) as max_number FROM players")) {

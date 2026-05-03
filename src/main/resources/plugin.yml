@@ -11,6 +11,7 @@ commands:
   hub:
   spawn:
   broadcast:
+    aliases: [broadcasts]
   players:
   links:
 
