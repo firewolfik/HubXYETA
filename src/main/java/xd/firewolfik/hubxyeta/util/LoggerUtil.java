@@ -1,6 +1,5 @@
 package xd.firewolfik.hubxyeta.util;
 
-import org.bukkit.entity.Player;
 import xd.firewolfik.hubxyeta.Main;
 
 import java.util.logging.Level;

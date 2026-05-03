@@ -4,6 +4,9 @@ import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.plugin.java.JavaPlugin;
 import xd.firewolfik.hubxyeta.commands.*;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
@@ -75,23 +78,32 @@ public final class Main extends JavaPlugin {
 
     private void registerCommands() {
         HubCommand hubCommand = new HubCommand(this);
-        getCommand("hub").setExecutor(hubCommand);
-        getCommand("hub").setTabCompleter(hubCommand);
+        registerCommand("hub", hubCommand, hubCommand);
 
         SpawnCommand spawnCommand = new SpawnCommand(this);
-        getCommand("spawn").setExecutor(spawnCommand);
-        getCommand("spawn").setTabCompleter(spawnCommand);
+        registerCommand("spawn", spawnCommand, spawnCommand);
 
         BroadcastCommand broadcastCommand = new BroadcastCommand(this);
-        getCommand("broadcast").setExecutor(broadcastCommand);
-        getCommand("broadcast").setTabCompleter(broadcastCommand);
+        registerCommand("broadcast", broadcastCommand, broadcastCommand);
 
         PlayersCommand playersCommand = new PlayersCommand(this);
-        getCommand("players").setExecutor(playersCommand);
-        getCommand("players").setTabCompleter(playersCommand);
+        registerCommand("players", playersCommand, playersCommand);
 
         LinksCommand linksCommand = new LinksCommand(this);
-        getCommand("links").setExecutor(linksCommand);
+        registerCommand("links", linksCommand, null);
+    }
+
+    private void registerCommand(String name, CommandExecutor executor, TabCompleter tabCompleter) {
+        PluginCommand command = getCommand(name);
+        if (command == null) {
+            getLogger().severe("Команда '" + name + "' не объявлена в plugin.yml");
+            return;
+        }
+
+        command.setExecutor(executor);
+        if (tabCompleter != null) {
+            command.setTabCompleter(tabCompleter);
+        }
     }
 
     private void loadMessagesConfig() {

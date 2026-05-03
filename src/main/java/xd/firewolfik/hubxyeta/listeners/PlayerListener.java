@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.*;
@@ -46,21 +47,23 @@ public class PlayerListener implements Listener {
             event.setJoinMessage(null);
         }
 
-        if (!plugin.getDatabaseManager().isPlayerExists(player.getUniqueId())) {
-            int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
+        if (config.isFirstJoinMessageEnabled()) {
+            if (!plugin.getDatabaseManager().isPlayerExists(player.getUniqueId())) {
+                int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
-            if (playerNumber > 0 && config.isFirstJoinMessageEnabled()) {
-                String message = plugin.getMessagesConfig().getString("messages.first-join");
-                if (message != null) {
-                    message = message
-                            .replace("%player%", player.getName())
-                            .replace("%number%", String.valueOf(playerNumber));
-                    Bukkit.broadcastMessage(ColorUtil.getInstance().translateColor(message));
+                if (playerNumber > 0) {
+                    String message = plugin.getMessagesConfig().getString("messages.first-join");
+                    if (message != null) {
+                        message = message
+                                .replace("%player%", player.getName())
+                                .replace("%number%", String.valueOf(playerNumber));
+
+                        String finalMessage = ColorUtil.getInstance().translateColor(message);
+                        Bukkit.broadcastMessage(finalMessage);
+                    }
                 }
             }
         }
-
-        player.getInventory().setHeldItemSlot(config.getSelectedSlot());
 
         if (config.isHidePlayer()) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> hidePlayersForPlayer(player));
@@ -86,7 +89,7 @@ public class PlayerListener implements Listener {
 
         config.setupWorld(player.getWorld());
 
-        if (config.isActionBarEnabled()) {
+        if (config.isActionBarEnabled() && !config.isPixelBattleWorld(player.getWorld())) {
             startActionBar(player);
         }
 
@@ -189,6 +192,13 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (config.isDisableDamage()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onFoodLevelChange(FoodLevelChangeEvent event) {
         if (config.isDisableHunger()) {
             event.setCancelled(true);
@@ -230,6 +240,8 @@ public class PlayerListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
+
+        if (config.isPixelBattleWorld(player.getWorld())) return;
 
         if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
             return;
@@ -305,6 +317,8 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        if (config.isPixelBattleWorld(player.getWorld())) return;
         event.setCancelled(true);
     }
 
@@ -314,7 +328,11 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        ItemStack item = event.getPlayer().getInventory().getItem(event.getNewSlot());
+        Player player = event.getPlayer();
+
+        if (config.isPixelBattleWorld(player.getWorld())) return;
+
+        ItemStack item = player.getInventory().getItem(event.getNewSlot());
         String itemId = itemsManager.getLobbyItemId(item);
 
         if (itemId != null) {
@@ -346,6 +364,10 @@ public class PlayerListener implements Listener {
                     cancel();
                     actionBarTasks.remove(player);
                     actionBarPaused.remove(player);
+                    return;
+                }
+
+                if (config.isPixelBattleWorld(player.getWorld())) {
                     return;
                 }
 

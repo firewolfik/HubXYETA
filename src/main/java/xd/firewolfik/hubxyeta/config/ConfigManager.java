@@ -54,11 +54,13 @@ public class ConfigManager {
 
     private boolean clearItems;
 
+    private boolean pixelBattleEnabled;
+    private String pixelBattleWorld;
+
     public ConfigManager(Main plugin) {
         this.plugin = plugin;
         this.playerEffects = new ArrayList<>();
         this.joinMessages = new ArrayList<>();
-
         loadAll();
     }
 
@@ -125,6 +127,14 @@ public class ConfigManager {
         if (leave != null) {
             clearItems = leave.getBoolean("clear-items");
         }
+
+        ConfigurationSection pixelbattle = config.getConfigurationSection("pixelbattle");
+        if (pixelbattle != null) {
+            pixelBattleEnabled = pixelbattle.getBoolean("enabled");
+            pixelBattleWorld = pixelbattle.getString("world", "pixelbattle");
+        }
+
+        plugin.getLogger().info("[DEBUG] pixelBattleEnabled=" + pixelBattleEnabled + " | pixelBattleWorld=" + pixelBattleWorld);
     }
 
     private void loadLobbyLocation(FileConfiguration config) {
@@ -239,5 +249,9 @@ public class ConfigManager {
                 player.removePotionEffect(effect.getType()));
 
         playerEffects.forEach(player::addPotionEffect);
+    }
+
+    public boolean isPixelBattleWorld(World world) {
+        return pixelBattleEnabled && world != null && world.getName().equals(pixelBattleWorld);
     }
 }
