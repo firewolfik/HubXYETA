@@ -1,14 +1,14 @@
 package xd.firewolfik.hubxyeta.listeners;
 
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.*;
@@ -18,6 +18,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import xd.firewolfik.hubxyeta.Main;
@@ -25,9 +26,9 @@ import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.managers.ItemsManager;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
 
-import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.Duration;
 
 public class PlayerListener implements Listener {
 
@@ -48,7 +49,7 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
 
         if (config.isHideStream()) {
-            event.setJoinMessage(null);
+            event.joinMessage(null);
         }
 
         if (config.isFirstJoinMessageEnabled()) {
@@ -56,25 +57,28 @@ public class PlayerListener implements Listener {
                 int playerNumber = plugin.getDatabaseManager().addPlayer(player.getUniqueId(), player.getName());
 
                 if (playerNumber > 0) {
-                    String message = plugin.getMessagesConfig().getString("messages.first-join");
+                    String message = plugin.getMessagesConfig().getString("messages.first-join-msg");
                     if (message != null) {
                         message = message
                                 .replace("%player%", player.getName())
                                 .replace("%number%", String.valueOf(playerNumber));
 
-                        String finalMessage = ColorUtil.getInstance().translateColor(message);
-                        Bukkit.broadcastMessage(finalMessage);
+                        Bukkit.broadcast(ColorUtil.getInstance().component(message));
                     }
                 }
             }
         }
 
         if (config.isHidePlayer()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> hidePlayersForPlayer(player));
+            hidePlayersForPlayer(player);
         }
 
         if (config.isLobbyLocationSet()) {
-            player.teleport(config.getSafeLobbyLocation());
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (player.isOnline()) {
+                    player.teleport(config.getSafeLobbyLocation());
+                }
+            });
         } else {
             plugin.getLogger().warning("Игрок " + player.getName() + " зашел, но спавн лобби не установлен!");
         }
@@ -93,7 +97,7 @@ public class PlayerListener implements Listener {
 
         config.setupWorld(player.getWorld());
 
-        if (config.isActionBarEnabled()) {
+        if (config.isActionBarEnabled() && !config.isPixelBattleWorld(player.getWorld())) {
             startActionBar(player);
         }
 
@@ -113,7 +117,7 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
 
         if (config.isHideStream()) {
-            event.setQuitMessage(null);
+            event.quitMessage(null);
         }
 
         if (config.isClearItems()) {
@@ -125,6 +129,7 @@ public class PlayerListener implements Listener {
             task.cancel();
         }
         actionBarPaused.remove(player);
+        itemsManager.clearCooldowns(player.getUniqueId());
     }
 
     private void hidePlayersForPlayer(Player newPlayer) {
@@ -136,31 +141,60 @@ public class PlayerListener implements Listener {
         }
     }
 
+    public void restorePlayerVisibility(Player player) {
+        if (config.isHidePlayer()) {
+            hidePlayersForPlayer(player);
+        }
+
+        if (plugin.getDatabaseManager().isHidePlayersEnabled(player.getUniqueId())) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (online != player) {
+                    player.hidePlayer(plugin, online);
+                }
+            }
+        }
+    }
+
+    public void resetPlayerVisibility() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player other : Bukkit.getOnlinePlayers()) {
+                if (other != player) {
+                    player.showPlayer(plugin, other);
+                }
+            }
+        }
+    }
+
     private void clearPlayerChat(Player player) {
         for (int i = 0; i < 100; i++) {
-            player.sendMessage("");
+            player.sendMessage(Component.empty());
         }
     }
 
     private void sendJoinMessages(Player player) {
         for (String message : config.getJoinMessages()) {
             if (!message.trim().isEmpty()) {
-                String coloredMessage = ColorUtil.getInstance().translateColor(message);
-                player.sendMessage(coloredMessage);
+                player.sendMessage(ColorUtil.getInstance().component(message));
             }
         }
     }
 
     private void sendJoinTitle(Player player) {
         if (!config.getJoinTitle().isEmpty() || !config.getJoinSubtitle().isEmpty()) {
-            String title = ColorUtil.getInstance().translateColor(config.getJoinTitle());
-            String subtitle = ColorUtil.getInstance().translateColor(config.getJoinSubtitle());
-            player.sendTitle(title, subtitle, 10, 70, 20);
+            player.showTitle(Title.title(
+                    ColorUtil.getInstance().component(config.getJoinTitle()),
+                    ColorUtil.getInstance().component(config.getJoinSubtitle()),
+                    Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3500), Duration.ofMillis(1000))
+            ));
         }
     }
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
@@ -196,6 +230,13 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (config.isDisableDamage()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onFoodLevelChange(FoodLevelChangeEvent event) {
         if (config.isDisableHunger()) {
             event.setCancelled(true);
@@ -203,7 +244,7 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
-    public void onAsyncPlayerChat(AsyncPlayerChatEvent event) {
+    public void onAsyncPlayerChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
 
         if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
@@ -214,7 +255,7 @@ public class PlayerListener implements Listener {
             event.setCancelled(true);
             String message = plugin.getMessagesConfig().getString("messages.disable-chat");
             if (message != null) {
-                player.sendMessage(ColorUtil.getInstance().translateColor(message));
+                player.sendMessage(ColorUtil.getInstance().component(message));
             }
         }
     }
@@ -237,6 +278,8 @@ public class PlayerListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
+
+        if (config.isPixelBattleWorld(player.getWorld())) return;
 
         if (config.isAdminBypass() && player.hasPermission("hub.admin")) {
             return;
@@ -312,6 +355,8 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        if (config.isPixelBattleWorld(player.getWorld())) return;
         event.setCancelled(true);
     }
 
@@ -321,26 +366,17 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        ItemStack item = event.getPlayer().getInventory().getItem(event.getNewSlot());
+        Player player = event.getPlayer();
+
+        if (config.isPixelBattleWorld(player.getWorld())) return;
+
+        ItemStack item = player.getInventory().getItem(event.getNewSlot());
         String itemId = itemsManager.getLobbyItemId(item);
 
         if (itemId != null) {
             ItemsManager.LobbyItem lobbyItem = itemsManager.getLobbyItem(itemId);
             if (lobbyItem != null && event.getNewSlot() != lobbyItem.getSlot()) {
                 event.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if (event.getTo() != null && event.getTo().getY() < -64) {
-            if (config.isLobbyLocationSet()) {
-                event.getPlayer().teleport(config.getSafeLobbyLocation());
-                String message = plugin.getMessagesConfig().getString("messages.no-void");
-                if (message != null) {
-                    event.getPlayer().sendMessage(ColorUtil.getInstance().translateColor(message));
-                }
             }
         }
     }
@@ -353,6 +389,10 @@ public class PlayerListener implements Listener {
                     cancel();
                     actionBarTasks.remove(player);
                     actionBarPaused.remove(player);
+                    return;
+                }
+
+                if (config.isPixelBattleWorld(player.getWorld())) {
                     return;
                 }
 
@@ -369,7 +409,7 @@ public class PlayerListener implements Listener {
                         .replace("%player%", player.getName())
                         .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
 
-                player.sendActionBar(ColorUtil.getInstance().translateColor(message));
+                player.sendActionBar(ColorUtil.getInstance().component(message));
             }
         }.runTaskTimer(plugin, 0L, 20);
 
@@ -386,7 +426,9 @@ public class PlayerListener implements Listener {
     }
 
     public void resumeActionBar(Player player) {
-        actionBarPaused.put(player, false);
+        if (player.isOnline() && hasActionBar(player)) {
+            actionBarPaused.put(player, false);
+        }
     }
 
     public void stopAllActionBars() {
@@ -396,9 +438,11 @@ public class PlayerListener implements Listener {
     }
 
     public void restartAllActionBars() {
-        if (plugin.getConfig().getBoolean("action-bar.enabled")) {
+        if (config.isActionBarEnabled()) {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                startActionBar(player);
+                if (!hasActionBar(player)) {
+                    startActionBar(player);
+                }
             }
         }
     }

@@ -2,9 +2,9 @@
 
 <div align="center">
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5-brightgreen)
-![Paper](https://img.shields.io/badge/Paper-Compatible-blue)
-![Java](https://img.shields.io/badge/Java-16+-red)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-brightgreen)
+![Paper](https://img.shields.io/badge/Paper-1.21.11-blue)
+![Java](https://img.shields.io/badge/Java-21-red)
 
 **Продвинутая система хаба для вашего Minecraft сервера**
 

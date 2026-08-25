@@ -1,9 +1,11 @@
 package xd.firewolfik.hubxyeta.config;
 
 import lombok.Getter;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.GameRule;
+import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
@@ -12,9 +14,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import xd.firewolfik.hubxyeta.Main;
+import xd.firewolfik.hubxyeta.util.RegistryUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Getter
 public class ConfigManager {
@@ -54,11 +58,13 @@ public class ConfigManager {
 
     private boolean clearItems;
 
+    private boolean pixelBattleEnabled;
+    private String pixelBattleWorld;
+
     public ConfigManager(Main plugin) {
         this.plugin = plugin;
         this.playerEffects = new ArrayList<>();
         this.joinMessages = new ArrayList<>();
-
         loadAll();
     }
 
@@ -74,6 +80,30 @@ public class ConfigManager {
 
     private void loadMainConfig() {
         FileConfiguration config = plugin.getConfig();
+
+        hidePlayer = false;
+        actionBarEnabled = false;
+        disableChat = false;
+        disableHunger = false;
+        disableDamage = false;
+        hideStream = false;
+        disableMove = false;
+        disableDrop = false;
+        disablePickup = false;
+        adminBypass = false;
+        worldTime = 6000;
+        doDaylightCycle = false;
+        doWeatherCycle = false;
+        doMobSpawning = false;
+        playerGameMode = GameMode.ADVENTURE;
+        playerHealth = 20.0;
+        playerEffects.clear();
+        joinMessages = new ArrayList<>();
+        joinTitle = "";
+        joinSubtitle = "";
+        clearChat = false;
+        firstJoinMessageEnabled = false;
+        clearItems = false;
 
         loadLobbyLocation(config);
 
@@ -115,8 +145,8 @@ public class ConfigManager {
         ConfigurationSection join = config.getConfigurationSection("join");
         if (join != null) {
             joinMessages = join.getStringList("join-message");
-            joinTitle = join.getString("join-title");
-            joinSubtitle = join.getString("join-subtitle");
+            joinTitle = join.getString("join-title", "");
+            joinSubtitle = join.getString("join-subtitle", "");
             clearChat = join.getBoolean("clear-chat");
             firstJoinMessageEnabled = join.getBoolean("first-join-msg");
         }
@@ -125,22 +155,35 @@ public class ConfigManager {
         if (leave != null) {
             clearItems = leave.getBoolean("clear-items");
         }
+
+        ConfigurationSection pixelbattle = config.getConfigurationSection("pixelbattle");
+        if (pixelbattle != null) {
+            pixelBattleEnabled = pixelbattle.getBoolean("enabled");
+            pixelBattleWorld = pixelbattle.getString("world", "pixelbattle");
+        }
+
+        plugin.getLogger().info("[DEBUG] pixelBattleEnabled=" + pixelBattleEnabled + " | pixelBattleWorld=" + pixelBattleWorld);
     }
 
     private void loadLobbyLocation(FileConfiguration config) {
+        lobbyLocation = null;
         ConfigurationSection locationHub = config.getConfigurationSection("general.locationHub");
         if (locationHub != null) {
-            String worldName = locationHub.getString("world", "world");
+            String worldName = locationHub.getString("world");
+            if (worldName == null || worldName.isBlank()) {
+                plugin.getLogger().warning("Мир лобби не указан!");
+                return;
+            }
             World world = Bukkit.getWorld(worldName);
 
             if (world != null) {
                 lobbyLocation = new Location(
                         world,
-                        locationHub.getDouble("x", 0),
-                        locationHub.getDouble("y", 100),
-                        locationHub.getDouble("z", 0),
-                        (float) locationHub.getDouble("yaw", 0),
-                        (float) locationHub.getDouble("pitch", 0)
+                        locationHub.getDouble("x"),
+                        locationHub.getDouble("y"),
+                        locationHub.getDouble("z"),
+                        (float) locationHub.getDouble("yaw"),
+                        (float) locationHub.getDouble("pitch")
                 );
             } else {
                 plugin.getLogger().warning("Мир '" + worldName + "' не найден!");
@@ -153,8 +196,8 @@ public class ConfigManager {
         ConfigurationSection player = config.getConfigurationSection("player");
         if (player != null) {
             try {
-                playerGameMode = GameMode.valueOf(player.getString("gamemode", "ADVENTURE"));
-            } catch (IllegalArgumentException e) {
+                playerGameMode = GameMode.valueOf(player.getString("gamemode", "ADVENTURE").toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException | NullPointerException e) {
                 plugin.getLogger().warning("Неверный игровой режим, используется ADVENTURE");
                 playerGameMode = GameMode.ADVENTURE;
             }
@@ -175,20 +218,24 @@ public class ConfigManager {
     private PotionEffect parseEffect(String effectStr) {
         try {
             String[] parts = effectStr.split(":");
-            if (parts.length < 3) {
+            int valueIndex = parts.length >= 4 && !parts[1].matches("-?\\d+") ? 2 : 1;
+            if (parts.length < valueIndex + 2) {
                 plugin.getLogger().warning("Неверный формат эффекта: " + effectStr);
                 return null;
             }
 
-            PotionEffectType type = PotionEffectType.getByName(parts[0]);
+            String effectName = valueIndex == 2 ? parts[0] + ":" + parts[1] : parts[0];
+            PotionEffectType type = RegistryUtil.find(
+                    RegistryAccess.registryAccess().getRegistry(RegistryKey.MOB_EFFECT), effectName);
             if (type == null) {
-                plugin.getLogger().warning("Неизвестный эффект: " + parts[0]);
+                plugin.getLogger().warning("Неизвестный эффект: " + effectName);
                 return null;
             }
 
-            int amplifier = Integer.parseInt(parts[1]);
-            int duration = Integer.parseInt(parts[2]) == 0 ? Integer.MAX_VALUE : Integer.parseInt(parts[2]) * 20;
-            boolean ambient = parts.length > 3 && Boolean.parseBoolean(parts[3]);
+            int amplifier = Integer.parseInt(parts[valueIndex]);
+            int durationSeconds = Integer.parseInt(parts[valueIndex + 1]);
+            int duration = durationSeconds == 0 ? Integer.MAX_VALUE : durationSeconds * 20;
+            boolean ambient = parts.length > valueIndex + 2 && Boolean.parseBoolean(parts[valueIndex + 2]);
 
             return new PotionEffect(type, duration, amplifier, ambient, false);
 
@@ -209,6 +256,11 @@ public class ConfigManager {
         loadLobbyLocation(plugin.getConfig());
     }
 
+    public int getSelectedSlot() {
+        int slot = plugin.getConfig().getInt("settings.selected-slot");
+        return Math.max(0, Math.min(8, slot));
+    }
+
     public boolean isLobbyLocationSet() {
         return lobbyLocation != null && lobbyLocation.getWorld() != null;
     }
@@ -221,9 +273,9 @@ public class ConfigManager {
         if (world == null) return;
 
         world.setTime(worldTime);
-        world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, doDaylightCycle);
-        world.setGameRule(GameRule.DO_WEATHER_CYCLE, doWeatherCycle);
-        world.setGameRule(GameRule.DO_MOB_SPAWNING, doMobSpawning);
+        world.setGameRule(GameRules.ADVANCE_TIME, doDaylightCycle);
+        world.setGameRule(GameRules.ADVANCE_WEATHER, doWeatherCycle);
+        world.setGameRule(GameRules.SPAWN_MOBS, doMobSpawning);
     }
 
     public void setupPlayer(Player player) {
@@ -234,5 +286,9 @@ public class ConfigManager {
                 player.removePotionEffect(effect.getType()));
 
         playerEffects.forEach(player::addPotionEffect);
+    }
+
+    public boolean isPixelBattleWorld(World world) {
+        return pixelBattleEnabled && world != null && world.getName().equals(pixelBattleWorld);
     }
 }

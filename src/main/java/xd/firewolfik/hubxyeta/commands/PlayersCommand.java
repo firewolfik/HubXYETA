@@ -43,6 +43,8 @@ public class PlayersCommand implements CommandExecutor, TabCompleter {
     }
 
     private void togglePlayerVisibility(Player player) {
+        plugin.getDatabaseManager().ensurePlayerExists(player.getUniqueId(), player.getName());
+
         boolean currentlyHidden = plugin.getDatabaseManager().isHidePlayersEnabled(player.getUniqueId());
 
         if (currentlyHidden) {

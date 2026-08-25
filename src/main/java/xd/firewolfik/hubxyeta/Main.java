@@ -1,14 +1,15 @@
 package xd.firewolfik.hubxyeta;
 
 import lombok.Getter;
-import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.plugin.java.JavaPlugin;
-import xd.firewolfik.hubxyeta.commands.HubCommand;
-import xd.firewolfik.hubxyeta.commands.SpawnCommand;
-import xd.firewolfik.hubxyeta.commands.BroadcastCommand;
-import xd.firewolfik.hubxyeta.commands.PlayersCommand;
+import xd.firewolfik.hubxyeta.commands.*;
 import xd.firewolfik.hubxyeta.config.ConfigManager;
 import xd.firewolfik.hubxyeta.listeners.PlayerListener;
 import xd.firewolfik.hubxyeta.managers.BroadcastManager;
@@ -39,7 +40,11 @@ public final class Main extends JavaPlugin {
         loadMessagesConfig();
 
         databaseManager = new DatabaseManager(this);
-        databaseManager.initialize();
+        if (!databaseManager.initialize()) {
+            getLogger().severe("Плагин отключен: база данных недоступна");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         configManager = new ConfigManager(this);
         itemsManager = new ItemsManager(this);
@@ -49,49 +54,78 @@ public final class Main extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(playerListener, this);
 
-        getLogger().info(ChatColor.YELLOW + "#############################");
-        getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.GREEN + "включен");
-        getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik.lol");
-        getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/firewolfik");
-        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.3" + ChatColor.GRAY + " (02.02.2026)");
-        getLogger().info(ChatColor.YELLOW + "#############################");
+        getLogger().info("#############################");
+        getLogger().info("HubXYETA - включен");
+        getLogger().info("Автор: firewolfik.lol");
+        getLogger().info("Связь с разработчиком: t.me/firewolfik");
+        getLogger().info("Версия плагина: " + getPluginMeta().getVersion());
+        getLogger().info("#############################");
 
         registerCommands();
 
-        getLogger().info(ChatColor.GRAY +"[Info]" + ChatColor.WHITE + " Загружено предметов: " + ChatColor.YELLOW + itemsManager.getAllItems().size());
+        getLogger().info("[Info] Загружено предметов: " + itemsManager.getAllItems().size());
+        Bukkit.getScheduler().runTask(this, this::restoreOnlinePlayers);
     }
 
     @Override
     public void onDisable() {
-        getLogger().info(ChatColor.YELLOW + "#############################");
-        getLogger().info(ChatColor.WHITE + "HubXYETA" + ChatColor.GRAY + " - " + ChatColor.RED + "выключен");
-        getLogger().info(ChatColor.WHITE + "Автор:" + ChatColor.GOLD + " firewolfik.lol");
-        getLogger().info(ChatColor.WHITE + "Связь с разработчиком:" + ChatColor.YELLOW + " t.me/firewolfik");
-        getLogger().info(ChatColor.WHITE + "Версия плагина:" + ChatColor.GOLD + " 2.2" + ChatColor.GRAY + " (02.02.2026)");
-        getLogger().info(ChatColor.YELLOW + "#############################");
-        broadcastManager.stopBroadcasting();
-        unloadUtil.unloadPlayerConfig();
+        getLogger().info("HubXYETA - выключен");
+        if (playerListener != null) {
+            playerListener.stopAllActionBars();
+        }
+        if (broadcastManager != null) {
+            broadcastManager.stopBroadcasting();
+        }
+        if (unloadUtil != null) {
+            unloadUtil.unloadPlayerConfig();
+        }
         if (databaseManager != null) {
             databaseManager.close();
         }
     }
 
+    private void restoreOnlinePlayers() {
+        if (!isEnabled()) {
+            return;
+        }
+
+        playerListener.resetPlayerVisibility();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            configManager.setupPlayer(player);
+            itemsManager.giveAllItems(player);
+            playerListener.restorePlayerVisibility(player);
+        }
+        playerListener.restartAllActionBars();
+    }
+
     private void registerCommands() {
         HubCommand hubCommand = new HubCommand(this);
-        getCommand("hub").setExecutor(hubCommand);
-        getCommand("hub").setTabCompleter(hubCommand);
+        registerCommand("hub", hubCommand, hubCommand);
 
         SpawnCommand spawnCommand = new SpawnCommand(this);
-        getCommand("spawn").setExecutor(spawnCommand);
-        getCommand("spawn").setTabCompleter(spawnCommand);
+        registerCommand("spawn", spawnCommand, spawnCommand);
 
         BroadcastCommand broadcastCommand = new BroadcastCommand(this);
-        getCommand("broadcast").setExecutor(broadcastCommand);
-        getCommand("broadcast").setTabCompleter(broadcastCommand);
+        registerCommand("broadcast", broadcastCommand, broadcastCommand);
 
         PlayersCommand playersCommand = new PlayersCommand(this);
-        getCommand("players").setExecutor(playersCommand);
-        getCommand("players").setTabCompleter(playersCommand);
+        registerCommand("players", playersCommand, playersCommand);
+
+        LinksCommand linksCommand = new LinksCommand(this);
+        registerCommand("links", linksCommand, null);
+    }
+
+    private void registerCommand(String name, CommandExecutor executor, TabCompleter tabCompleter) {
+        PluginCommand command = getCommand(name);
+        if (command == null) {
+            getLogger().severe("Команда '" + name + "' не объявлена в plugin.yml");
+            return;
+        }
+
+        command.setExecutor(executor);
+        if (tabCompleter != null) {
+            command.setTabCompleter(tabCompleter);
+        }
     }
 
     private void loadMessagesConfig() {
@@ -105,13 +139,12 @@ public final class Main extends JavaPlugin {
     public void reloadPlugin() {
         playerListener.stopAllActionBars();
         broadcastManager.stopBroadcasting();
-        reloadConfig();
         loadMessagesConfig();
         configManager.reloadConfigs();
         itemsManager.reloadItems();
         broadcastManager.reloadBroadcasts();
-        playerListener.restartAllActionBars();
-        getLogger().info(ChatColor.WHITE +"[" + ChatColor.YELLOW + "Info" + ChatColor.WHITE + "]" + ChatColor.WHITE + " Плагин " + ChatColor.GREEN + "перезагружен");
+        restoreOnlinePlayers();
+        getLogger().info("[Info] Плагин перезагружен");
     }
 
     public FileConfiguration getMessagesConfig() {

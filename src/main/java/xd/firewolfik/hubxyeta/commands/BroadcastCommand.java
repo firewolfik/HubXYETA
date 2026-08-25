@@ -28,6 +28,8 @@ public class BroadcastCommand implements CommandExecutor, TabCompleter {
         }
 
         if ((args.length == 1 && args[0].equalsIgnoreCase("toggle"))) {
+            plugin.getDatabaseManager().ensurePlayerExists(player.getUniqueId(), player.getName());
+
             boolean currentStatus = plugin.getDatabaseManager().isBroadcastsEnabled(player.getUniqueId());
 
             boolean newStatus = !currentStatus;

@@ -1,11 +1,12 @@
 package xd.firewolfik.hubxyeta.managers;
 
 import lombok.Getter;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
@@ -15,12 +16,21 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import xd.firewolfik.hubxyeta.Main;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
+import xd.firewolfik.hubxyeta.util.RegistryUtil;
 
 import java.io.File;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Getter
 public class BroadcastManager {
+
+    private static final Pattern URL_PATTERN = Pattern.compile(
+            "(?i)(?<![\\w@.])(?:https?://\\S+|(?:[a-z0-9-]+\\.)+(?:ru|su|com|net|org|io|gg|me|xyz|shop|store|online|site|top|fun|pro|club|vip|info|biz|cc|tv|co|dev|app|link|live)(?:/\\S*)?)");
+
+    private static final Pattern FORMAT_CODE_PATTERN = Pattern.compile(
+            "(?i)&#[0-9a-f]{6}|&[0-9a-fk-or]");
 
     private final Main plugin;
     private FileConfiguration broadcastsConfig;
@@ -59,6 +69,10 @@ public class BroadcastManager {
 
         enabled = broadcastsConfig.getBoolean("settings.enabled", true);
         interval = broadcastsConfig.getInt("settings.interval", 60);
+        if (interval <= 0) {
+            plugin.getLogger().warning("Интервал объявлений должен быть больше 0, используется 60 секунд");
+            interval = 60;
+        }
 
         ConfigurationSection broadcastsSection = broadcastsConfig.getConfigurationSection("broadcasts");
         if (broadcastsSection == null) {
@@ -190,8 +204,10 @@ public class BroadcastManager {
                     .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
                     .replace("%NL%", "\n");
 
-            message = ColorUtil.getInstance().translateColor(message);
-            BaseComponent[] messageComponents = TextComponent.fromLegacyText(message);
+            Component messageComponent = linkifyUrls(message);
+            if (messageComponent == null) {
+                messageComponent = ColorUtil.getInstance().component(message);
+            }
 
             if (broadcast.getHover() != null && broadcast.getHover().getText() != null &&
                     !broadcast.getHover().getText().isEmpty()) {
@@ -209,23 +225,17 @@ public class BroadcastManager {
                 if (applyHover) {
                     List<String> hoverLines = new ArrayList<>();
                     for (String hoverLine : broadcast.getHover().getText()) {
-                        hoverLines.add(ColorUtil.getInstance().translateColor(
-                                hoverLine.replace("%player%", player.getName())
-                                        .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
-                        ));
+                        hoverLines.add(hoverLine.replace("%player%", player.getName())
+                                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size())));
                     }
 
                     String hoverText = String.join("\n", hoverLines);
-                    BaseComponent[] hoverComponents = TextComponent.fromLegacyText(hoverText);
-                    HoverEvent hoverEvent = new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(hoverComponents));
-
-                    for (BaseComponent comp : messageComponents) {
-                        comp.setHoverEvent(hoverEvent);
-                    }
+                    HoverEvent<Component> hoverEvent = HoverEvent.showText(ColorUtil.getInstance().component(hoverText));
+                    messageComponent = messageComponent.hoverEvent(hoverEvent);
                 }
             }
 
-            player.spigot().sendMessage(messageComponents);
+            player.sendMessage(messageComponent);
         }
 
         if (broadcast.getButton() != null) {
@@ -237,49 +247,115 @@ public class BroadcastManager {
         }
     }
 
+    private Component linkifyUrls(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return null;
+        }
+
+        String masked = FORMAT_CODE_PATTERN.matcher(raw)
+                .replaceAll(m -> " ".repeat(m.group().length()));
+
+        Matcher matcher = URL_PATTERN.matcher(masked);
+        if (!matcher.find()) {
+            return null;
+        }
+        matcher.reset();
+
+        TextComponent.Builder builder = Component.text();
+        int last = 0;
+
+        while (matcher.find()) {
+            String before = raw.substring(last, matcher.start());
+            if (!before.isEmpty()) {
+                builder.append(ColorUtil.getInstance().component(before));
+            }
+
+            String url = raw.substring(matcher.start(), matcher.end());
+            String prefix = activeFormat(raw.substring(0, matcher.start()));
+            Component linkComponent = ColorUtil.getInstance().component(prefix + url)
+                    .clickEvent(ClickEvent.openUrl(toClickableUrl(url)));
+            builder.append(linkComponent);
+
+            last = matcher.end();
+        }
+
+        String tail = raw.substring(last);
+        if (!tail.isEmpty()) {
+            builder.append(ColorUtil.getInstance().component(tail));
+        }
+
+        return builder.build();
+    }
+
+    private String activeFormat(String text) {
+        Matcher matcher = FORMAT_CODE_PATTERN.matcher(text);
+        String color = "";
+        StringBuilder formats = new StringBuilder();
+
+        while (matcher.find()) {
+            String code = matcher.group();
+            char c = Character.toLowerCase(code.charAt(1));
+            if (c == '#' || c == 'r' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+                color = code;
+                formats.setLength(0);
+            } else {
+                formats.append(code);
+            }
+        }
+
+        return color + formats;
+    }
+
+    private String toClickableUrl(String url) {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url;
+        }
+        return "https://" + url;
+    }
+
     private void sendButton(Player player, BroadcastButton button) {
         String buttonText = button.getText()
                 .replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
 
-        buttonText = ColorUtil.getInstance().translateColor(buttonText);
-        BaseComponent[] buttonComponents = TextComponent.fromLegacyText(buttonText);
+        Component buttonComponent = ColorUtil.getInstance().component(buttonText);
 
         String command = button.getCommand()
                 .replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
 
-        ClickEvent clickEvent = new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/" + command);
+        ClickEvent clickEvent;
+        if (command.startsWith("http://") || command.startsWith("https://")) {
+            clickEvent = ClickEvent.openUrl(command);
+        } else {
+            clickEvent = ClickEvent.runCommand("/" + command);
+        }
+        buttonComponent = buttonComponent.clickEvent(clickEvent);
 
         if (button.getHoverText() != null && !button.getHoverText().isEmpty()) {
             List<String> hoverLines = new ArrayList<>();
             for (String hoverLine : button.getHoverText()) {
-                hoverLines.add(ColorUtil.getInstance().translateColor(
-                        hoverLine.replace("%player%", player.getName())
-                                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
-                ));
+                hoverLines.add(hoverLine.replace("%player%", player.getName())
+                        .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size())));
             }
 
             String hoverText = String.join("\n", hoverLines);
-            BaseComponent[] hoverComponents = TextComponent.fromLegacyText(hoverText);
-            HoverEvent hoverEvent = new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(hoverComponents));
-
-            for (BaseComponent comp : buttonComponents) {
-                comp.setClickEvent(clickEvent);
-                comp.setHoverEvent(hoverEvent);
-            }
-        } else {
-            for (BaseComponent comp : buttonComponents) {
-                comp.setClickEvent(clickEvent);
-            }
+            buttonComponent = buttonComponent.hoverEvent(HoverEvent.showText(
+                    ColorUtil.getInstance().component(hoverText)
+            ));
         }
 
-        player.spigot().sendMessage(buttonComponents);
+        player.sendMessage(buttonComponent);
     }
 
     private void playSound(Player player, BroadcastSound broadcastSound) {
         try {
-            Sound sound = Sound.valueOf(broadcastSound.getSoundName().toUpperCase());
+            Sound sound = RegistryUtil.find(
+                    RegistryAccess.registryAccess().getRegistry(RegistryKey.SOUND_EVENT),
+                    broadcastSound.getSoundName());
+            if (sound == null) {
+                throw new IllegalArgumentException("Unknown sound");
+            }
             player.playSound(player.getLocation(), sound, broadcastSound.getVolume(), broadcastSound.getPitch());
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Неверное название звука: " + broadcastSound.getSoundName());

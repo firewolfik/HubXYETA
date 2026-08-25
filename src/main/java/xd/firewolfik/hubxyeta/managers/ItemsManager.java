@@ -1,6 +1,10 @@
 package xd.firewolfik.hubxyeta.managers;
 
 import lombok.Getter;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -15,6 +19,7 @@ import org.bukkit.persistence.PersistentDataType;
 import xd.firewolfik.hubxyeta.Main;
 import xd.firewolfik.hubxyeta.util.ActionExecutor;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
+import xd.firewolfik.hubxyeta.util.RegistryUtil;
 
 import java.io.File;
 import java.util.*;
@@ -78,14 +83,14 @@ public class ItemsManager {
 
     private LobbyItem createLobbyItem(String id, ConfigurationSection section) {
         try {
-            String name = section.getString("name");
+            String name = section.getString("name", "");
             List<String> lore = section.getStringList("lore");
-            String materialName = section.getString("material").toUpperCase();
+            String materialName = section.getString("material", "PAPER").toUpperCase(Locale.ROOT);
             int slot = section.getInt("slot", 0);
             int amount = Math.max(1, section.getInt("amount", 1));
             List<String> actions = section.getStringList("actions");
             int cooldown = section.getInt("cooldown", 0);
-            String cooldownMessage = section.getString("cooldown-message");
+            String cooldownMessage = section.getString("cooldown-message", "&cПодождите %time% сек.");
 
             Material material;
             try {
@@ -103,14 +108,14 @@ public class ItemsManager {
                 return null;
             }
 
-            meta.setDisplayName(ColorUtil.getInstance().translateColor(name));
+            meta.customName(withoutDefaultDecorations(ColorUtil.getInstance().component(name)));
 
             if (!lore.isEmpty()) {
-                List<String> coloredLore = new ArrayList<>();
+                List<Component> coloredLore = new ArrayList<>();
                 for (String line : lore) {
-                    coloredLore.add(ColorUtil.getInstance().translateColor(line));
+                    coloredLore.add(withoutDefaultDecorations(ColorUtil.getInstance().component(line)));
                 }
-                meta.setLore(coloredLore);
+                meta.lore(coloredLore);
             }
 
             if (section.contains("enchantments")) {
@@ -140,16 +145,22 @@ public class ItemsManager {
         }
     }
 
+    private Component withoutDefaultDecorations(Component component) {
+        return component
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.STRIKETHROUGH, false);
+    }
+
     private void applyEnchantment(ItemMeta meta, String enchantStr, String itemId) {
         try {
-            String[] parts = enchantStr.split(":");
-            if (parts.length < 2) {
+            int separator = enchantStr.lastIndexOf(':');
+            if (separator <= 0 || separator == enchantStr.length() - 1) {
                 plugin.getLogger().warning("Неверный формат зачарования для " + itemId + ": " + enchantStr);
                 return;
             }
 
-            String enchantName = parts[0].toUpperCase();
-            int level = Integer.parseInt(parts[1]);
+            String enchantName = enchantStr.substring(0, separator).toUpperCase(Locale.ROOT);
+            int level = Integer.parseInt(enchantStr.substring(separator + 1));
 
             Enchantment enchantment = getEnchantmentByName(enchantName);
 
@@ -167,7 +178,8 @@ public class ItemsManager {
     }
 
     private Enchantment getEnchantmentByName(String name) {
-        Enchantment enchantment = Enchantment.getByName(name);
+        Enchantment enchantment = RegistryUtil.find(
+                RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT), name);
         if (enchantment != null) {
             return enchantment;
         }
@@ -185,7 +197,8 @@ public class ItemsManager {
 
         String modernName = legacyNames.get(name);
         if (modernName != null) {
-            return Enchantment.getByName(modernName);
+            return RegistryUtil.find(
+                    RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT), modernName);
         }
 
         return null;
@@ -252,7 +265,6 @@ public class ItemsManager {
             return;
         }
 
-        // Проверка кулдауна
         if (item.getCooldown() > 0) {
             if (isOnCooldown(player, itemId)) {
                 long remaining = getRemainingCooldown(player, itemId);
@@ -309,6 +321,10 @@ public class ItemsManager {
 
         long cooldownEnd = System.currentTimeMillis() + (item.getCooldown() * 1000L);
         playerCooldowns.put(itemId, cooldownEnd);
+    }
+
+    public void clearCooldowns(UUID playerId) {
+        cooldowns.remove(playerId);
     }
 
     public String getLobbyItemId(ItemStack item) {

@@ -1,13 +1,15 @@
 package xd.firewolfik.hubxyeta.util;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import xd.firewolfik.hubxyeta.Main;
 
 import java.util.List;
+import java.time.Duration;
 
 public class ActionExecutor {
 
@@ -34,26 +36,31 @@ public class ActionExecutor {
 
         String parsedAction = action.replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
+                .replace("%prfx%", plugin.getMessagesConfig().getString("messages.prefix", ""))
                 .replace("%NL%", "\n");
 
         if (parsedAction.startsWith("[MSG] ")) {
             String message = parsedAction.substring(6);
-            player.sendMessage(ColorUtil.getInstance().translateColor(message));
+            player.sendMessage(ColorUtil.getInstance().component(message));
 
         } else if (parsedAction.startsWith("[MM] ")) {
             String message = parsedAction.substring(5);
-            player.sendMessage(ColorUtil.getInstance().translateColor(message));
+            player.sendMessage(ColorUtil.getInstance().component(message));
 
         } else if (parsedAction.startsWith("[BROADCAST] ")) {
             String message = parsedAction.substring(12);
-            Bukkit.broadcastMessage(ColorUtil.getInstance().translateColor(message));
+            Bukkit.broadcast(ColorUtil.getInstance().component(message));
 
         } else if (parsedAction.startsWith("[TITLE] ")) {
             String titleData = parsedAction.substring(8);
             String[] parts = titleData.split(";");
-            String title = parts.length > 0 ? ColorUtil.getInstance().translateColor(parts[0]) : "";
-            String subtitle = parts.length > 1 ? ColorUtil.getInstance().translateColor(parts[1]) : "";
-            player.sendTitle(title, subtitle, 10, 70, 20);
+            String title = parts.length > 0 ? parts[0] : "";
+            String subtitle = parts.length > 1 ? parts[1] : "";
+            player.showTitle(Title.title(
+                    ColorUtil.getInstance().component(title),
+                    ColorUtil.getInstance().component(subtitle),
+                    Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3500), Duration.ofMillis(1000))
+            ));
 
         } else if (parsedAction.startsWith("[ACTIONBAR] ")) {
             String message = parsedAction.substring(12);
@@ -63,8 +70,7 @@ public class ActionExecutor {
                 plugin.getPlayerListener().pauseActionBar(player);
             }
 
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                    TextComponent.fromLegacyText(ColorUtil.getInstance().translateColor(message)));
+            player.sendActionBar(ColorUtil.getInstance().component(message));
 
             if (hadActionBar) {
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -122,7 +128,11 @@ public class ActionExecutor {
             String[] parts = soundData.split(";");
             if (parts.length >= 3) {
                 try {
-                    Sound sound = Sound.valueOf(parts[0].toUpperCase());
+                    Sound sound = RegistryUtil.find(
+                            RegistryAccess.registryAccess().getRegistry(RegistryKey.SOUND_EVENT), parts[0]);
+                    if (sound == null) {
+                        throw new IllegalArgumentException("Unknown sound");
+                    }
                     float volume = Float.parseFloat(parts[1]);
                     float pitch = Float.parseFloat(parts[2]);
                     player.playSound(player.getLocation(), sound, volume, pitch);
