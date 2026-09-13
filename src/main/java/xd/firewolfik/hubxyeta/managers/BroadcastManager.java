@@ -15,7 +15,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import xd.firewolfik.hubxyeta.Main;
-import xd.firewolfik.hubxyeta.util.ColorUtil;
+import xd.firewolfik.hubxyeta.util.ComponentFormatter;
+import xd.firewolfik.hubxyeta.util.PlaceholderUtil;
 import xd.firewolfik.hubxyeta.util.RegistryUtil;
 
 import java.io.File;
@@ -35,7 +36,8 @@ public class BroadcastManager {
     private final Main plugin;
     private FileConfiguration broadcastsConfig;
     private List<Broadcast> broadcasts;
-    private List<Broadcast> remainingBroadcasts;
+    private final List<Broadcast> currentCycle;
+    private Broadcast lastBroadcast;
     private BukkitTask broadcastTask;
 
     private boolean enabled;
@@ -44,7 +46,7 @@ public class BroadcastManager {
     public BroadcastManager(Main plugin) {
         this.plugin = plugin;
         this.broadcasts = new ArrayList<>();
-        this.remainingBroadcasts = new ArrayList<>();
+        this.currentCycle = new ArrayList<>();
         loadBroadcastsConfig();
     }
 
@@ -59,7 +61,8 @@ public class BroadcastManager {
     public void reloadBroadcasts() {
         stopBroadcasting();
         broadcasts.clear();
-        remainingBroadcasts.clear();
+        currentCycle.clear();
+        lastBroadcast = null;
         loadBroadcastsConfig();
         plugin.getLogger().info("Объявления перезагружены! Загружено: " + broadcasts.size());
     }
@@ -91,12 +94,10 @@ public class BroadcastManager {
                     }
                 } catch (Exception e) {
                     plugin.getLogger().severe("Ошибка загрузки объявления " + broadcastId + ": " + e.getMessage());
-                    e.printStackTrace();
                 }
             }
         }
 
-        remainingBroadcasts.addAll(broadcasts);
         plugin.getLogger().info("Загружено объявлений: " + broadcasts.size());
     }
 
@@ -130,9 +131,14 @@ public class BroadcastManager {
             ConfigurationSection soundSection = section.getConfigurationSection("sound");
             if (soundSection != null) {
                 sound = new BroadcastSound();
-                sound.setSoundName(soundSection.getString("name", "ENTITY_EXPERIENCE_ORB_PICKUP"));
+                String soundName = soundSection.getString("name", "ENTITY_EXPERIENCE_ORB_PICKUP");
+                sound.setSoundName(soundName);
                 sound.setVolume((float) soundSection.getDouble("volume", 1.0));
                 sound.setPitch((float) soundSection.getDouble("pitch", 1.0));
+
+                Sound resolved = RegistryUtil.find(
+                        RegistryAccess.registryAccess().getRegistry(RegistryKey.SOUND_EVENT), soundName);
+                sound.setSound(resolved);
             }
         }
 
@@ -178,15 +184,20 @@ public class BroadcastManager {
             return null;
         }
 
-        if (remainingBroadcasts.isEmpty()) {
-            remainingBroadcasts.addAll(broadcasts);
+        if (currentCycle.isEmpty()) {
+            List<Broadcast> pool = new ArrayList<>(broadcasts);
+            Collections.shuffle(pool, java.util.concurrent.ThreadLocalRandom.current());
+
+            if (pool.size() > 1 && lastBroadcast != null && pool.get(0).equals(lastBroadcast)) {
+                int swapIndex = 1 + java.util.concurrent.ThreadLocalRandom.current().nextInt(pool.size() - 1);
+                Collections.swap(pool, 0, swapIndex);
+            }
+
+            currentCycle.addAll(pool);
         }
 
-        Random random = new Random();
-        int index = random.nextInt(remainingBroadcasts.size());
-        Broadcast broadcast = remainingBroadcasts.remove(index);
-
-        return broadcast;
+        lastBroadcast = currentCycle.remove(0);
+        return lastBroadcast;
     }
 
     private void sendBroadcast(Broadcast broadcast) {
@@ -198,15 +209,14 @@ public class BroadcastManager {
     }
 
     private void sendBroadcastToPlayer(Player player, Broadcast broadcast) {
+        PlaceholderUtil placeholders = plugin.getPlaceholderUtil();
+
         for (int i = 0; i < broadcast.getMessages().size(); i++) {
-            String message = broadcast.getMessages().get(i)
-                    .replace("%player%", player.getName())
-                    .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
-                    .replace("%NL%", "\n");
+            String message = placeholders.apply(player, broadcast.getMessages().get(i));
 
             Component messageComponent = linkifyUrls(message);
             if (messageComponent == null) {
-                messageComponent = ColorUtil.getInstance().component(message);
+                messageComponent = ComponentFormatter.format(message);
             }
 
             if (broadcast.getHover() != null && broadcast.getHover().getText() != null &&
@@ -223,14 +233,9 @@ public class BroadcastManager {
                 }
 
                 if (applyHover) {
-                    List<String> hoverLines = new ArrayList<>();
-                    for (String hoverLine : broadcast.getHover().getText()) {
-                        hoverLines.add(hoverLine.replace("%player%", player.getName())
-                                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size())));
-                    }
-
+                    List<String> hoverLines = placeholders.apply(player, broadcast.getHover().getText());
                     String hoverText = String.join("\n", hoverLines);
-                    HoverEvent<Component> hoverEvent = HoverEvent.showText(ColorUtil.getInstance().component(hoverText));
+                    HoverEvent<Component> hoverEvent = HoverEvent.showText(ComponentFormatter.format(hoverText));
                     messageComponent = messageComponent.hoverEvent(hoverEvent);
                 }
             }
@@ -267,12 +272,12 @@ public class BroadcastManager {
         while (matcher.find()) {
             String before = raw.substring(last, matcher.start());
             if (!before.isEmpty()) {
-                builder.append(ColorUtil.getInstance().component(before));
+                builder.append(ComponentFormatter.format(before));
             }
 
             String url = raw.substring(matcher.start(), matcher.end());
             String prefix = activeFormat(raw.substring(0, matcher.start()));
-            Component linkComponent = ColorUtil.getInstance().component(prefix + url)
+            Component linkComponent = ComponentFormatter.format(prefix + url)
                     .clickEvent(ClickEvent.openUrl(toClickableUrl(url)));
             builder.append(linkComponent);
 
@@ -281,7 +286,7 @@ public class BroadcastManager {
 
         String tail = raw.substring(last);
         if (!tail.isEmpty()) {
-            builder.append(ColorUtil.getInstance().component(tail));
+            builder.append(ComponentFormatter.format(tail));
         }
 
         return builder.build();
@@ -314,34 +319,25 @@ public class BroadcastManager {
     }
 
     private void sendButton(Player player, BroadcastButton button) {
-        String buttonText = button.getText()
-                .replace("%player%", player.getName())
-                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
+        PlaceholderUtil placeholders = plugin.getPlaceholderUtil();
+        String buttonText = placeholders.apply(player, button.getText());
+        Component buttonComponent = ComponentFormatter.format(buttonText);
 
-        Component buttonComponent = ColorUtil.getInstance().component(buttonText);
-
-        String command = button.getCommand()
-                .replace("%player%", player.getName())
-                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()));
-
+        String command = placeholders.apply(player, button.getCommand());
         ClickEvent clickEvent;
         if (command.startsWith("http://") || command.startsWith("https://")) {
             clickEvent = ClickEvent.openUrl(command);
         } else {
-            clickEvent = ClickEvent.runCommand("/" + command);
+            String slashCommand = command.startsWith("/") ? command : "/" + command;
+            clickEvent = ClickEvent.runCommand(slashCommand);
         }
         buttonComponent = buttonComponent.clickEvent(clickEvent);
 
         if (button.getHoverText() != null && !button.getHoverText().isEmpty()) {
-            List<String> hoverLines = new ArrayList<>();
-            for (String hoverLine : button.getHoverText()) {
-                hoverLines.add(hoverLine.replace("%player%", player.getName())
-                        .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size())));
-            }
-
+            List<String> hoverLines = placeholders.apply(player, button.getHoverText());
             String hoverText = String.join("\n", hoverLines);
             buttonComponent = buttonComponent.hoverEvent(HoverEvent.showText(
-                    ColorUtil.getInstance().component(hoverText)
+                    ComponentFormatter.format(hoverText)
             ));
         }
 
@@ -349,15 +345,17 @@ public class BroadcastManager {
     }
 
     private void playSound(Player player, BroadcastSound broadcastSound) {
-        try {
-            Sound sound = RegistryUtil.find(
+        Sound sound = broadcastSound.getSound();
+        if (sound == null) {
+            sound = RegistryUtil.find(
                     RegistryAccess.registryAccess().getRegistry(RegistryKey.SOUND_EVENT),
                     broadcastSound.getSoundName());
-            if (sound == null) {
-                throw new IllegalArgumentException("Unknown sound");
-            }
+            broadcastSound.setSound(sound);
+        }
+
+        if (sound != null) {
             player.playSound(player.getLocation(), sound, broadcastSound.getVolume(), broadcastSound.getPitch());
-        } catch (IllegalArgumentException e) {
+        } else {
             plugin.getLogger().warning("Неверное название звука: " + broadcastSound.getSoundName());
         }
     }
@@ -392,6 +390,19 @@ public class BroadcastManager {
             this.hover = hover;
             this.button = button;
             this.sound = sound;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Broadcast broadcast = (Broadcast) o;
+            return Objects.equals(id, broadcast.id);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id);
         }
     }
 
@@ -436,11 +447,16 @@ public class BroadcastManager {
     @Getter
     public static class BroadcastSound {
         private String soundName;
+        private Sound sound;
         private float volume;
         private float pitch;
 
         public void setSoundName(String soundName) {
             this.soundName = soundName;
+        }
+
+        public void setSound(Sound sound) {
+            this.sound = sound;
         }
 
         public void setVolume(float volume) {

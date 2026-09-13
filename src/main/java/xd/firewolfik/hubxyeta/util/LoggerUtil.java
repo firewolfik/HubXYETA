@@ -11,15 +11,19 @@ public class LoggerUtil {
     public LoggerUtil(Main plugin) {
         this.plugin = plugin;
     }
+
     public void info(String message) {
         plugin.getLogger().info(message);
     }
+
     public void warning(String message) {
         plugin.getLogger().warning(message);
     }
+
     public void error(String message) {
         plugin.getLogger().severe(message);
     }
+
     public void error(String message, Throwable throwable) {
         plugin.getLogger().log(Level.SEVERE, message, throwable);
     }

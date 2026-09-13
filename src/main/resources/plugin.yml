@@ -5,7 +5,9 @@ authors: [ firewolfik ]
 website: firewolfik.lol
 
 version: '2.3'
-api-version: '1.21.11'
+api-version: '1.21'
+
+softdepend: [ PlaceholderAPI ]
 
 commands:
   hub:

@@ -13,7 +13,6 @@ public class UnloadUtil {
         this.plugin = plugin;
     }
 
-
     public void unloadPlayerConfig() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             try {
@@ -26,11 +25,10 @@ public class UnloadUtil {
                 player.setHealth(20.0);
                 player.setFoodLevel(20);
                 player.setSaturation(20.0f);
-
                 player.setGameMode(GameMode.SURVIVAL);
 
                 for (Player other : Bukkit.getOnlinePlayers()) {
-                    if (other != player) {
+                    if (!other.equals(player)) {
                         player.showPlayer(plugin, other);
                         other.showPlayer(plugin, player);
                     }

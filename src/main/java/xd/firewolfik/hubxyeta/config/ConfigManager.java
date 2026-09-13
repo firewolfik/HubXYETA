@@ -161,8 +161,6 @@ public class ConfigManager {
             pixelBattleEnabled = pixelbattle.getBoolean("enabled");
             pixelBattleWorld = pixelbattle.getString("world", "pixelbattle");
         }
-
-        plugin.getLogger().info("[DEBUG] pixelBattleEnabled=" + pixelBattleEnabled + " | pixelBattleWorld=" + pixelBattleWorld);
     }
 
     private void loadLobbyLocation(FileConfiguration config) {
@@ -202,7 +200,8 @@ public class ConfigManager {
                 playerGameMode = GameMode.ADVENTURE;
             }
 
-            playerHealth = Math.max(1.0, Math.min(20.0, player.getDouble("heath", 20.0)));
+            double healthVal = player.contains("health") ? player.getDouble("health", 20.0) : player.getDouble("heath", 20.0);
+            playerHealth = Math.max(1.0, Math.min(20.0, healthVal));
 
             playerEffects.clear();
             List<String> effects = player.getStringList("effects");

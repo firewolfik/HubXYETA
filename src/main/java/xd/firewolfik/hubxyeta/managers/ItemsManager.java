@@ -19,25 +19,30 @@ import org.bukkit.persistence.PersistentDataType;
 import xd.firewolfik.hubxyeta.Main;
 import xd.firewolfik.hubxyeta.util.ActionExecutor;
 import xd.firewolfik.hubxyeta.util.ColorUtil;
+import xd.firewolfik.hubxyeta.util.ComponentFormatter;
+import xd.firewolfik.hubxyeta.util.PlaceholderUtil;
 import xd.firewolfik.hubxyeta.util.RegistryUtil;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 public class ItemsManager {
 
     private final Main plugin;
     private final ActionExecutor actionExecutor;
+    private final NamespacedKey lobbyItemIdKey;
     private FileConfiguration itemsConfig;
     private Map<String, LobbyItem> lobbyItems;
-    private Map<UUID, Map<String, Long>> cooldowns;
+    private final Map<UUID, Map<String, Long>> cooldowns;
 
     public ItemsManager(Main plugin) {
         this.plugin = plugin;
         this.actionExecutor = new ActionExecutor(plugin);
+        this.lobbyItemIdKey = new NamespacedKey(plugin, "lobby_item_id");
         this.lobbyItems = new HashMap<>();
-        this.cooldowns = new HashMap<>();
+        this.cooldowns = new ConcurrentHashMap<>();
         loadItemsConfig();
     }
 
@@ -132,11 +137,12 @@ public class ItemsManager {
                 }
             }
 
+            meta.getPersistentDataContainer().set(lobbyItemIdKey, PersistentDataType.STRING, id);
             NamespacedKey key = new NamespacedKey(plugin, "lobby_item_" + id);
             meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
 
-            return new LobbyItem(id, item, slot, actions, cooldown, cooldownMessage);
+            return new LobbyItem(id, item, name, lore, slot, actions, cooldown, cooldownMessage);
 
         } catch (Exception e) {
             plugin.getLogger().severe("Критическая ошибка создания предмета " + id + ": " + e.getMessage());
@@ -241,7 +247,7 @@ public class ItemsManager {
                 slot = 0;
             }
 
-            player.getInventory().setItem(slot, item.getItem().clone());
+            player.getInventory().setItem(slot, buildItem(player, item));
             player.updateInventory();
         } else {
             plugin.getLogger().warning("Попытка выдать несуществующий предмет: " + itemId);
@@ -256,7 +262,36 @@ public class ItemsManager {
             slot = 0;
         }
 
-        player.getInventory().setItem(slot, lobbyItem.getItem().clone());
+        player.getInventory().setItem(slot, buildItem(player, lobbyItem));
+    }
+
+    private ItemStack buildItem(Player player, LobbyItem lobbyItem) {
+        ItemStack item = lobbyItem.getItem().clone();
+
+        if (!lobbyItem.hasPlaceholders()) {
+            return item;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+
+        PlaceholderUtil placeholders = plugin.getPlaceholderUtil();
+
+        meta.customName(withoutDefaultDecorations(
+                ColorUtil.getInstance().component(placeholders.apply(player, lobbyItem.getName()))));
+
+        if (!lobbyItem.getLore().isEmpty()) {
+            List<Component> coloredLore = new ArrayList<>();
+            for (String line : placeholders.apply(player, lobbyItem.getLore())) {
+                coloredLore.add(withoutDefaultDecorations(ColorUtil.getInstance().component(line)));
+            }
+            meta.lore(coloredLore);
+        }
+
+        item.setItemMeta(meta);
+        return item;
     }
 
     public void executeItemActions(Player player, String itemId) {
@@ -268,16 +303,16 @@ public class ItemsManager {
         if (item.getCooldown() > 0) {
             if (isOnCooldown(player, itemId)) {
                 long remaining = getRemainingCooldown(player, itemId);
-                String message = item.getCooldownMessage()
-                        .replace("%time%", String.valueOf(remaining));
-                player.sendMessage(ColorUtil.getInstance().translateColor(message));
+                String message = plugin.getPlaceholderUtil().apply(player,
+                        item.getCooldownMessage().replace("%time%", String.valueOf(remaining)));
+                player.sendMessage(ComponentFormatter.format(message));
                 return;
             }
             setCooldown(player, itemId);
         }
 
         if (item.getActions() != null && !item.getActions().isEmpty()) {
-            actionExecutor.executeActions(player, item.getActions());
+            plugin.getActionService().execute(player, item.getActions());
         }
     }
 
@@ -306,8 +341,11 @@ public class ItemsManager {
         }
 
         long cooldownEnd = playerCooldowns.get(itemId);
-        long remaining = (cooldownEnd - System.currentTimeMillis()) / 1000;
-        return Math.max(0, remaining);
+        long diff = cooldownEnd - System.currentTimeMillis();
+        if (diff <= 0) {
+            return 0;
+        }
+        return (diff + 999) / 1000;
     }
 
     private void setCooldown(Player player, String itemId) {
@@ -316,7 +354,7 @@ public class ItemsManager {
             return;
         }
 
-        cooldowns.putIfAbsent(player.getUniqueId(), new HashMap<>());
+        cooldowns.computeIfAbsent(player.getUniqueId(), k -> new ConcurrentHashMap<>());
         Map<String, Long> playerCooldowns = cooldowns.get(player.getUniqueId());
 
         long cooldownEnd = System.currentTimeMillis() + (item.getCooldown() * 1000L);
@@ -328,11 +366,19 @@ public class ItemsManager {
     }
 
     public String getLobbyItemId(ItemStack item) {
-        if (item == null || item.getItemMeta() == null) {
+        if (item == null || !item.hasItemMeta()) {
             return null;
         }
 
         ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return null;
+        }
+
+        String id = meta.getPersistentDataContainer().get(lobbyItemIdKey, PersistentDataType.STRING);
+        if (id != null) {
+            return id;
+        }
 
         for (String itemId : lobbyItems.keySet()) {
             NamespacedKey key = new NamespacedKey(plugin, "lobby_item_" + itemId);
@@ -367,18 +413,34 @@ public class ItemsManager {
     public static class LobbyItem {
         private final String id;
         private final ItemStack item;
+        private final String name;
+        private final List<String> lore;
         private final int slot;
         private final List<String> actions;
         private final int cooldown;
         private final String cooldownMessage;
+        private final boolean placeholders;
 
-        public LobbyItem(String id, ItemStack item, int slot, List<String> actions, int cooldown, String cooldownMessage) {
+        public LobbyItem(String id, ItemStack item, String name, List<String> lore, int slot,
+                         List<String> actions, int cooldown, String cooldownMessage) {
             this.id = id;
             this.item = item.clone();
+            this.name = name != null ? name : "";
+            this.lore = lore != null ? new ArrayList<>(lore) : new ArrayList<>();
             this.slot = slot;
             this.actions = actions != null ? new ArrayList<>(actions) : new ArrayList<>();
             this.cooldown = cooldown;
             this.cooldownMessage = cooldownMessage;
+            this.placeholders = containsPlaceholder(this.name) || this.lore.stream()
+                    .anyMatch(LobbyItem::containsPlaceholder);
+        }
+
+        private static boolean containsPlaceholder(String text) {
+            return text != null && text.indexOf('%') >= 0;
+        }
+
+        public boolean hasPlaceholders() {
+            return placeholders;
         }
 
         public ItemStack getItemClone() {

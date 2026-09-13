@@ -1,43 +1,35 @@
 package xd.firewolfik.hubxyeta.commands;
 
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import xd.firewolfik.hubxyeta.Main;
-import xd.firewolfik.hubxyeta.util.ColorUtil;
+import xd.firewolfik.hubxyeta.util.ComponentFormatter;
 
 import java.util.List;
 
-public class LinksCommand implements CommandExecutor {
-
-    private final Main plugin;
-    private final ColorUtil colorUtil;
+public class LinksCommand extends BaseCommand {
 
     public LinksCommand(Main plugin) {
-        this.plugin = plugin;
-        this.colorUtil = ColorUtil.getInstance();
+        super(plugin);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            String onlyPlayers = plugin.getMessagesConfig().getString("messages.only-players", "&cТолько для игроков.");
-            sender.sendMessage(colorUtil.translateColor(onlyPlayers));
+        if (!requirePlayer(sender)) {
             return true;
         }
 
         Player player = (Player) sender;
-
-        List<String> links = plugin.getMessagesConfig().getStringList("messages.links-msg");
-
-        if (links.isEmpty()) {
-            player.sendMessage(colorUtil.translateColor("&cТекст не настроен. Проверьте messages.yml."));
+        List<String> links = plugin.getMessageService().getRawList("messages.links-msg");
+        if (links == null || links.isEmpty()) {
+            player.sendMessage(ComponentFormatter.format("&cТекст не настроен. Проверьте messages.yml."));
             return true;
         }
 
         for (String line : links) {
-            player.sendMessage(colorUtil.translateColor(line));
+            String parsed = plugin.getPlaceholderUtil().apply(player, line);
+            player.sendMessage(ComponentFormatter.format(parsed));
         }
 
         return true;

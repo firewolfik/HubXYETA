@@ -35,6 +35,12 @@ messages:
   players-hidden: "&fигроков &7скрыл &fотъебись"
   players-usage: "&fкрч объясняю: &e/players toggle"
 
+  # Сообщение для команды links
+  links-msg:
+    - "&eСсылки"
+    - "&fСайт: &ehttps://github.com/firewolfik"
+    - "&fТелеграм: &ehttps://t.me/firewolfik"
+
   # Сообщения для перезагрузки
   reload-start: "&fНАЧИНАЕТСЯ &eВЗЛОМ ПИЗДЫ&f! &fПЕРЕЗАГРУЗКА!"
   reload-success: "&fконфиг &eрелоднул &fдрочи дальше"

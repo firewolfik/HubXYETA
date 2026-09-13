@@ -1,66 +1,51 @@
 package xd.firewolfik.hubxyeta.commands;
 
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import xd.firewolfik.hubxyeta.Main;
-import xd.firewolfik.hubxyeta.util.ColorUtil;
+import xd.firewolfik.hubxyeta.util.ComponentFormatter;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class BroadcastCommand implements CommandExecutor, TabCompleter {
-
-    private final Main plugin;
+public class BroadcastCommand extends BaseCommand {
 
     public BroadcastCommand(Main plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            String message = plugin.getMessagesConfig().getString("messages.only-players");
-            sender.sendMessage(ColorUtil.getInstance().translateColor(message));
+        if (!requirePlayer(sender)) {
             return true;
         }
 
-        if ((args.length == 1 && args[0].equalsIgnoreCase("toggle"))) {
-            plugin.getDatabaseManager().ensurePlayerExists(player.getUniqueId(), player.getName());
+        Player player = (Player) sender;
+        if (args.length == 1 && args[0].equalsIgnoreCase("toggle")) {
+            boolean current = plugin.getDatabaseManager().isBroadcastsEnabled(player.getUniqueId());
+            boolean next = !current;
+            plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), next);
 
-            boolean currentStatus = plugin.getDatabaseManager().isBroadcastsEnabled(player.getUniqueId());
+            String key = next ? "messages.broadcasts-enabled" : "messages.broadcasts-disabled";
+            plugin.getMessageService().send(player, key);
+            return true;
+        }
 
-            boolean newStatus = !currentStatus;
-            plugin.getDatabaseManager().setBroadcastsEnabled(player.getUniqueId(), newStatus);
-
-            String messageKey = newStatus ? "messages.broadcasts-enabled" : "messages.broadcasts-disabled";
-            String message = plugin.getMessagesConfig().getString(messageKey);
-            if (message != null) {
-                player.sendMessage(ColorUtil.getInstance().translateColor(message));
-            }
+        String usage = plugin.getMessageService().getRaw("messages.broadcasts-usage");
+        if (usage != null && !usage.isEmpty()) {
+            plugin.getMessageService().send(player, "messages.broadcasts-usage");
         } else {
-            String message = plugin.getMessagesConfig().getString("messages.broadcasts-usage");
-            if (message != null) {
-                player.sendMessage(ColorUtil.getInstance().translateColor(message));
-            } else {
-                player.sendMessage(ColorUtil.getInstance().translateColor("&cИспользование: &e/broadcast [toggle]"));
-            }
+            player.sendMessage(ComponentFormatter.format("&cИспользование: &e/broadcast [toggle]"));
         }
         return true;
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
-        List<String> completions = new ArrayList<>();
-
         if (args.length == 1) {
-            String input = args[0].toLowerCase();
-            if ("toggle".startsWith(input)) {
-                completions.add("toggle");
-            }
+            return filterPrefix(List.of("toggle"), args[0]);
         }
-        return completions;
+        return Collections.emptyList();
     }
 }

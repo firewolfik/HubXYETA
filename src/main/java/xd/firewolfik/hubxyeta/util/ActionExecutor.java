@@ -1,15 +1,9 @@
 package xd.firewolfik.hubxyeta.util;
 
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
-import net.kyori.adventure.title.Title;
-import org.bukkit.Bukkit;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import xd.firewolfik.hubxyeta.Main;
 
 import java.util.List;
-import java.time.Duration;
 
 public class ActionExecutor {
 
@@ -20,126 +14,10 @@ public class ActionExecutor {
     }
 
     public void executeActions(Player player, List<String> actions) {
-        if (actions == null || actions.isEmpty()) {
-            return;
-        }
-
-        for (String action : actions) {
-            executeAction(player, action);
-        }
+        plugin.getActionService().execute(player, actions);
     }
 
     public void executeAction(Player player, String action) {
-        if (action == null || action.isEmpty()) {
-            return;
-        }
-
-        String parsedAction = action.replace("%player%", player.getName())
-                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
-                .replace("%prfx%", plugin.getMessagesConfig().getString("messages.prefix", ""))
-                .replace("%NL%", "\n");
-
-        if (parsedAction.startsWith("[MSG] ")) {
-            String message = parsedAction.substring(6);
-            player.sendMessage(ColorUtil.getInstance().component(message));
-
-        } else if (parsedAction.startsWith("[MM] ")) {
-            String message = parsedAction.substring(5);
-            player.sendMessage(ColorUtil.getInstance().component(message));
-
-        } else if (parsedAction.startsWith("[BROADCAST] ")) {
-            String message = parsedAction.substring(12);
-            Bukkit.broadcast(ColorUtil.getInstance().component(message));
-
-        } else if (parsedAction.startsWith("[TITLE] ")) {
-            String titleData = parsedAction.substring(8);
-            String[] parts = titleData.split(";");
-            String title = parts.length > 0 ? parts[0] : "";
-            String subtitle = parts.length > 1 ? parts[1] : "";
-            player.showTitle(Title.title(
-                    ColorUtil.getInstance().component(title),
-                    ColorUtil.getInstance().component(subtitle),
-                    Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3500), Duration.ofMillis(1000))
-            ));
-
-        } else if (parsedAction.startsWith("[ACTIONBAR] ")) {
-            String message = parsedAction.substring(12);
-
-            boolean hadActionBar = plugin.getPlayerListener().hasActionBar(player);
-            if (hadActionBar) {
-                plugin.getPlayerListener().pauseActionBar(player);
-            }
-
-            player.sendActionBar(ColorUtil.getInstance().component(message));
-
-            if (hadActionBar) {
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    plugin.getPlayerListener().resumeActionBar(player);
-                }, 60L);
-            }
-
-        } else if (parsedAction.startsWith("[PLAYER] ")) {
-            String command = parsedAction.substring(9);
-            Bukkit.dispatchCommand(player, command);
-
-        } else if (parsedAction.startsWith("[CONSOLE] ")) {
-            String command = parsedAction.substring(10);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-
-        } else if (parsedAction.startsWith("[CONNECT] ")) {
-            String server = parsedAction.substring(10);
-            plugin.getLogger().info("Attempting to connect " + player.getName() + " to server: " + server);
-
-        } else if (parsedAction.equals("[TELEPORT_TO_SPAWN]")) {
-            if (plugin.getConfigManager() != null && plugin.getConfigManager().isLobbyLocationSet()) {
-                player.teleport(plugin.getConfigManager().getSafeLobbyLocation());
-            }
-
-        } else if (parsedAction.equals("[HIDE_PLAYERS]")) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                if (online != player) {
-                    player.hidePlayer(plugin, online);
-                }
-            }
-
-            plugin.getDatabaseManager().setHidePlayersEnabled(player.getUniqueId(), true);
-
-            String message = plugin.getMessagesConfig().getString("messages.players-hidden");
-            if (message != null && !message.isEmpty()) {
-                player.sendMessage(ColorUtil.getInstance().translateColor(message));
-            }
-
-        } else if (parsedAction.equals("[SHOW_PLAYERS]")) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                if (online != player) {
-                    player.showPlayer(plugin, online);
-                }
-            }
-
-            plugin.getDatabaseManager().setHidePlayersEnabled(player.getUniqueId(), false);
-
-            String message = plugin.getMessagesConfig().getString("messages.players-shown");
-            if (message != null && !message.isEmpty()) {
-                player.sendMessage(ColorUtil.getInstance().translateColor(message));
-            }
-
-        } else if (parsedAction.startsWith("[SOUND] ")) {
-            String soundData = parsedAction.substring(8);
-            String[] parts = soundData.split(";");
-            if (parts.length >= 3) {
-                try {
-                    Sound sound = RegistryUtil.find(
-                            RegistryAccess.registryAccess().getRegistry(RegistryKey.SOUND_EVENT), parts[0]);
-                    if (sound == null) {
-                        throw new IllegalArgumentException("Unknown sound");
-                    }
-                    float volume = Float.parseFloat(parts[1]);
-                    float pitch = Float.parseFloat(parts[2]);
-                    player.playSound(player.getLocation(), sound, volume, pitch);
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Неверный формат звука: " + soundData);
-                }
-            }
-        }
+        plugin.getActionService().execute(player, action);
     }
 }
